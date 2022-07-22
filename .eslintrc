@@ -1,6 +1,5 @@
 {
   "env": {
-    "es6": false,
     "browser": true,
     "jest": true
   },
@@ -9,11 +8,15 @@
     "indent": ["warn", 2],
     "react/react-in-jsx-scope": "off",
     "react/jsx-filename-extension": "off",
+    "react/jsx-one-expression-per-line": "off",
+    "react/prop-types": "off",
+    "react/destructuring-assignment": "off",
     "object-curly-newline": [
       "error",
       {
         "ImportDeclaration": "never"
       }
-    ]
+    ],
+    "no-unused-vars": "warn"
   }
 }

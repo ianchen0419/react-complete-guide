@@ -1,70 +1,103 @@
-# Getting Started with Create React App
+# React Complete Guide
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## 學習筆記
 
-## Available Scripts
+### props
 
-In the project directory, you can run:
+用於兩個元件之間傳遞資訊使用，比如 A 元件裡面有 B 元件
 
-### `npm start`
+```js:A.js
+import B from './B.js'
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+function A() {
+  return <B title="hey" name="cool" />
+}
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```
 
-### `npm test`
+```js:B.js
+function B(props) {
+  console.log(props); // {title: "hey", name: "cool"}
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+  return ...省略...
+}
 
-### `npm run build`
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Wrapper Components
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+一個 Component 裡面挖一個洞，可以填任何東西 inner
+比方說 Card Component，裡面可以包東西。使用 Card 時要用這種方式`<Card>東西放這裡</Card>`
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+`props.children`是特別的名稱，雖然沒有指定，但是是指包在 Tag 裡面的東西
 
-### `npm run eject`
+```js:Card.js
+function Card(props) {
+  const classes = 'card ' + props.className;
+  return <div className={classes}>{props.children}</div>;
+}
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```js:A.js
+function A() {
+  function A() {
+    return (
+      <Card className="anotherClassOK">
+        <h2>ALOHA!</h2>
+      </Card>
+    )
+  }
+}
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### JSX
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+jsx 是一種語法，原本的用法是`React.createElement()`
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+例如，這是一段 jsx
 
-## Learn More
+```js
+function App() {
+  return (
+    <div>
+      <h2>Let&apos;s get start</h2>
+      <Expenses items={expense} />
+    </div>
+  );
+}
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+它翻譯成`React.createElement()`後會變這樣
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```js
+import React from 'react';
 
-### Code Splitting
+function App() {
+  return React.createElement(
+    'div',
+    {},
+    React.createElement('h2', {}, 'Let&apos;s get start'),
+    React.createElement(Expenses, { items: expense }),
+  );
+}
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Arrow Function Syntax
 
-### Analyzing the Bundle Size
+傳統的 Function 長這樣
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```js:App.js
+function App() {
+  return ...;
+}
+export default App;
+```
 
-### Making a Progressive Web App
+寫成 Arrow Function 以後變這樣
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```js:App.js
+const App = () => {
+  return ...;
+}
+export default App;
+```

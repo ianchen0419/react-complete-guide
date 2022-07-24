@@ -101,3 +101,286 @@ const App = () => {
 }
 export default App;
 ```
+
+### useState
+
+useState 是一個 hook
+
+功能：當按鈕點擊後，改變標題的文字內容
+
+```js
+import React, { useState } from 'react';
+
+function ExpenseItem(props) {
+  const [title, setTitle] = userState(props.title); // useState必須放在Function的Direct Scope
+
+  function clickHandler() {
+    setTitle('Updated');
+  }
+
+  return (
+    <div>
+      <h2>{title}</h2>
+      <button onClick={clickHandler}></button>
+    </div>
+  );
+}
+```
+
+### onChange 拿到 input 的 value
+
+```js
+function Form() {
+  function changeHandler(event) {
+    console.log(event.target.value);
+  }
+
+  return <input onChange={changeHandler} />;
+}
+```
+
+### Multilple State and Single State
+
+這是 Multiple State
+
+```js
+function Form() {
+  const [enteredTitle, setEnteredTitle] = useState('');
+  const [enteredAmount, setEnteredAmount] = useState('');
+  const [enteredDate, setEnteredDate] = useState('');
+
+  function titleChangeHandler(event) {
+    setEnteredTitle(event.target.value);
+  }
+
+  function amountChangeHandler(event) {
+    setEnteredAmount(event.target.value);
+  }
+
+  function dateChangeHandler(event) {
+    setEnteredDate(event.target.date);
+  }
+
+  return (
+    <form>
+      <input onChange={titleChangeHandler}>
+      <input onChange={amountChangeHandler}>
+      <input onChange={dateChangeHandler}>
+    </form>
+  );
+}
+```
+
+Single State
+
+```js
+function Form() {
+  const [userInput, setUserInput] = useState({
+    enteredTitle: '',
+    enteredAmount: '',
+    enteredDate: '',
+  });
+
+  function titleChangeHandler(event) {
+    setUserInput({
+      ...userInput, // 必須要Copy剩下的，不然會遺失掉剩下的
+      enteredTitle: event.target.value,
+    });
+  }
+
+  function amountChangeHandler(event) {
+    setUserInput({
+      ...userInput,
+      enteredAmount: event.target.value,
+    });
+  }
+
+  function dateChangeHandler(event) {
+    setUserInput({
+      ...userInput,
+      enteredDate: event.target.value,
+    });
+  }
+
+  return (
+    <form>
+      <input onChange={titleChangeHandler}>
+      <input onChange={amountChangeHandler}>
+      <input onChange={dateChangeHandler}>
+    </form>
+  );
+}
+```
+
+### 更新 State 的方式
+
+如果有一串 State，但是只需要更新其中一項，有兩種做法
+
+第一種
+
+```js
+function Form() {
+  const [userInput, setUserInput] = useState({
+    enteredTitle: '',
+    enteredAmount: '',
+    enteredDate: '',
+  });
+
+  function titleChangeHandler(event) {
+    setUserInput({
+      ...userInput,
+      enteredTitle: event.target.value,
+    });
+  }
+
+  return (
+    <form>
+      <input onChange={titleChangeHandler}>
+      <input onChange={amountChangeHandler}>
+      <input onChange={dateChangeHandler}>
+    </form>
+  );
+}
+```
+
+第二種：第二種比較好，因為 prevState 拿到的資料比較即時
+
+```diff js
+function Form() {
+  const [userInput, setUserInput] = useState({
+    enteredTitle: '',
+    enteredAmount: '',
+    enteredDate: '',
+  });
+
+  function titleChangeHandler(event) {
++   setUserInput((prevState) => ({
++     ...prevState,
++     enteredTitle: event.target.value,
++   }));
+  }
+
+  return (
+    <form>
+      <input onChange={titleChangeHandler}>
+      <input onChange={amountChangeHandler}>
+      <input onChange={dateChangeHandler}>
+    </form>
+  );
+}
+```
+
+### Two-way binding
+
+首先先處理 useState，讓 input 每次 change 都可以抓到改變的值
+
+```js
+function Form() {
+  const [enteredTitle, setEnteredTitle] = useState('');
+
+  function changeHandler(event) {
+    setEnteredTitle(event.target.value)
+  }
+
+  function submitHandler(event) {
+    event.preventDefault();
+  }
+
+  return (
+    <form onSubmit={}>
+      <input type="text" onChange={changeHandler} />
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+接下來處理 two-way binding，當輸入完輸入資訊後，按下 Submit 按鈕，要清空輸入框的內容
+two-way binding 的寫法是`value={enteredtitle}`
+
+```diff js
+function Form() {
+  const [enteredTitle, setEnteredTitle] = useState('');
+
+  function changeHandler(event) {
+    setEnteredTitle(event.target.value)
+  }
+
+  function submitHandler(event) {
+    event.preventDefault();
++   console.log(enteredTitle); // 拿到輸入的value
++   setEnteredTitle(''); // 清空value的state
+  }
+
+  return (
+    <form onSubmit={}>
++     <input value={enteredTitle} type="text" onChange={changeHandler} />
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+### Child-to-Parent 的元件溝通
+
+`<NewExpense />`裡面有`<ExpenseForm />`，當`<ExpenseForm />`的值更新後，要傳更新值給`<NewExpense />`
+
+作法：設計自己的 Event Prop
+
+NewExpense 部分（Parent Component）
+
+```js:NewExpense.js
+import ExpenseForm from './ExpenseForm';
+
+function NewExpense() {
+  function saveExpenseDataHandler(enteredExpenseData) {
+    const expenseData = {
+      ...enteredExpenseData,
+      id: Math.random().toString(),
+    };
+  }
+
+  return <ExpenseForm onSaveExpenseData={saveExpenseDataHandler} />
+}
+
+export default NewExpense;
+```
+
+ExpenseForm 部分（Child Component）
+
+```diff js:ExpenseForm.js
++function ExpenseForm(props) {
+  function submitHandler() {
+    const expenseData = { title: "aloha" };
++   props.onSaveExpenseData(expenseData);
+  }
+
+  return (
+    <form onSubmit={submitHandler}>
+      <button type="submit"></button>
+    </form>
+  )
+}
+
+export default ExpenseForm
+```
+
+資料如果要跨元件傳遞，只能透過 Parent-to-Children 方式，如果是兩個鄰居元件要互傳，那要先鄰居 A→ 傳給 Parent（lifting the state up），再由 Parent→ 傳給鄰居 B
+
+### Component 種類
+
+#### Controll Component
+
+定義：裡面有表單元件，會負責往上傳遞/接收資料
+範例：ExpenseFilter
+
+#### Presentational Component
+
+或可稱為 Stateless Component、Dump Component
+定義：沒有`useState`的元件
+
+#### Stateful Component
+
+或可稱為 Smart Component
+定義：有使用到`useState`的元件
+範例：ExpenseForm

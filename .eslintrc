@@ -3,7 +3,7 @@
     "browser": true,
     "jest": true
   },
-  "extends": "airbnb",
+  "extends": ["airbnb", "prettier"],
   "rules": {
     "indent": ["warn", 2],
     "react/react-in-jsx-scope": "off",
@@ -29,6 +29,13 @@
         "ImportDeclaration": "never"
       }
     ],
-    "no-unused-vars": "warn"
+    "no-unused-vars": "warn",
+    "react/self-closing-comp": [
+      "error",
+      {
+        "component": true,
+        "html": false
+      }
+    ]
   }
 }

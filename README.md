@@ -384,3 +384,146 @@ export default ExpenseForm
 或可稱為 Smart Component
 定義：有使用到`useState`的元件
 範例：ExpenseForm
+
+### Dynamic List
+
+資料流部分：初始資料 + 更新資料
+
+首先定義初始資料
+
+```js:App.js
+import Expenses from './components/Expenses/Expenses';
+import NewExpense from './components/NewExpense/NewExpense';
+
+const DUMMY_EXPENSES = [ ...省略... ];
+
+function App(
+  function addExpenseHandler(expense) {
+    console.log(expense); // 每當NewExpense底下的form有送出新資料，這裡就會收到新的expense
+  }
+
+  return (
+    <NewExpense onAddExpense={addExpenseHandler} />
+    <Expenses />
+  );
+);
+
+export Default App();
+```
+
+再來用 useState 直接設定初始值，然後傳到到裡面的元件裡
+
+```diff js:App.js
++import React, { useState } from 'react';
+import Expenses from './components/Expenses/Expenses';
+import NewExpense from './components/NewExpense/NewExpense';
+
+const DUMMY_EXPENSES = [ ...省略... ];
+
+function App(
++ const [expenses, setExpenses] = useState(DUMMY_EXPENSES);
+
+  function addExpenseHandler(expense) {
+    console.log(expense); // 每當NewExpense底下的form有送出新資料，這裡就會收到新的expense
+  }
+
+  return (
+    <NewExpense onAddExpense={addExpenseHandler} />
++   <Expenses items={expenses} />
+  );
+);
+
+export Default App();
+```
+
+最後加上新資料，更新每次的 expenses
+
+```diff js:App.js
+import React, { useState } from 'react';
+import Expenses from './components/Expenses/Expenses';
+import NewExpense from './components/NewExpense/NewExpense';
+
+const DUMMY_EXPENSES = [ ...省略... ];
+
+function App(
+  const [expenses, setExpenses] = useState(DUMMY_EXPENSES);
+
+  function addExpenseHandler(expense) {
+-   console.log(expense); // 每當NewExpense底下的form有送出新資料，這裡就會收到新的expense
++   setExpenses([expense, ...expenses]);
+  }
+
+  return (
+    <NewExpense onAddExpense={addExpenseHandler} />
+    <Expenses items={expenses} />
+  );
+);
+
+export Default App();
+```
+
+然後，因為`setExpenses`使用函式的方式呼叫比較好，所以再改成這樣
+
+```diff App.js
+function addExpenseHandler(expense) {
+-   setExpenses([expense, ...expenses]);
++   setExpenses((prevExpenses) => [expense, ...prevExpenses]);
+}
+```
+
+### Conditional Content
+
+使用 ternary condition 來寫，可以用小括弧把 Content 包起來
+
+```js
+return {
+  1 + 1 == 2 ?
+  (<p>Hey</p>) :
+  (<p>Woo</p>)
+};
+```
+
+### And Operator
+
+如果條件符合的話，會回傳`&&`後面的內容
+
+```js
+1 + 1 == 2 && console.log('y'); // y
+
+1 + 1 == 3 && console.log('y'); // false
+```
+
+用 And Operator 簡化 Conditional Content
+
+```js
+return (
+  { 1 + 1 === 2 && <p>Hey</p> }
+  { 1 + 1 !== 2 && <p>Woo</p> }
+)
+```
+
+### Dynamic Style
+
+需求：做出長條圖，高度由 css 的`height`控制
+JSX 的`style={{}}`的第外括號表示要填入 JS 變數，內括號表示一個物件
+
+如果是填入`background-color`這種複合單字，有兩種記法
+
+- 第一種 `<div style={{'background-color': 'red'}}></div>`
+- 第二種 `<div style={{backgroundColor: 'red'}}></div>`
+
+```js
+unction ChartBar(props) {
+  let barFillHeight = '0%';
+
+  if (props.max > 0) {
+    barFillHeight = Math.round((props.value / props.max) * 100) + '%';
+  }
+
+  return (
+    ...
+    <div className="chart-bar__fill" style={{height: barFillHeight}}></div>
+    ...
+  );
+}
+```

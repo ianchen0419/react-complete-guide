@@ -3,7 +3,7 @@
     "browser": true,
     "jest": true
   },
-  "extends": ["airbnb", "prettier"],
+  "extends": ["react-app", "react-app/jest", "airbnb", "prettier"],
   "rules": {
     "indent": ["warn", 2],
     "react/react-in-jsx-scope": "off",

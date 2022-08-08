@@ -1,6 +1,14 @@
 # React Complete Guide
 
-## 學習筆記
+## Archived Projects
+
+- Expense - https://github.com/ianchen0419/react-complete-guide/tree/expense
+
+## Airbnb ESLint Rules
+
+https://github.com/airbnb/javascript/tree/master/packages/eslint-config-airbnb-base/rules
+
+## Learning Memo
 
 ### props
 

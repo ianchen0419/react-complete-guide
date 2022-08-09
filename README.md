@@ -535,3 +535,210 @@ unction ChartBar(props) {
   );
 }
 ```
+
+### Dynamic className
+
+```jsx
+<label className={`form-control ${!isValid ? 'invalid' : ''}`} htmlFor="goal">
+  Course Goal
+</label>
+```
+
+### Styled Components
+
+#### Button 的用法（Tag selector）
+
+創造出封裝的 CSS 環境，讓元件的 CSS 不會影響外部
+
+使用方法：
+
+首先，引入 styled-components，選用一個 HTML 元件
+（例如選用`button`）
+然後將 Button.css 的內容貼到``引號之中
+並且把原本的 Function Component 刪掉
+
+```js:Button.js
+import styled from 'styled-components';
+
+const Button = styled.button`
+.button {
+  width: 100%;
+  font: inherit;
+  padding: 0.5rem 1.5rem;
+  border: 1px solid #8b005d;
+  color: white;
+  background: #8b005d;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.26);
+  cursor: pointer;
+
+  @media (min-width: 768px) {
+    width: auto;
+  }
+}
+
+.button:focus {
+  outline: none;
+}
+
+.button:hover,
+.button:active {
+  background: #ac0e77;
+  border-color: #ac0e77;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.26);
+}
+`;
+
+// function Button(props) {
+//   return (
+//     <button
+//       type={props.type === 'submit' ? 'submit' : 'button'}
+//       className="button"
+//       onClick={props.onClick}
+//     >
+//       {props.children}
+//     </button>
+//   );
+// }
+
+export default Button;
+```
+
+因為`styled.button`就是只 css 的 button selector 了，所以裡面改成 SCSS 風格的寫法
+
+```diff js:Button.js
+import styled from 'styled-components';
+
+const Button = styled.button`
+-.button {
+  width: 100%;
+  font: inherit;
+  padding: 0.5rem 1.5rem;
+  border: 1px solid #8b005d;
+  color: white;
+  background: #8b005d;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.26);
+  cursor: pointer;
+-}
+
+@media (min-width: 768px) {
+  width: auto;
+}
+
+-.button:focus {
++&:focus {
+  outline: none;
+}
+
+-.button:hover,
+-.button:active {
++&:hover,
++&:active {
+  background: #ac0e77;
+  border-color: #ac0e77;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.26);
+}
+`;
+```
+
+#### .form-control 的用法（Class Selector）
+
+```js:CourseInput.js
+import styled from 'styled-components';
+
+const FormControl = styled.div`
+  margin: 0.5rem 0;
+
+  & label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 0.5rem;
+    color: ${(props) => (props.invalid ? 'red' : 'black')};
+  }
+}
+`
+
+function CourseInput(props) {
+  return (
+    <form>
+      <FormControl invalid={!isValid}>
+        <label>Label</label>
+        ...
+      </FormControl
+    </form>
+  )
+}
+
+export default CourseInput
+```
+
+### CSS Modules
+
+CSS Modules 一樣不會影響到 Global 環境，並且是 React 內建支援
+
+首先，把`Button.css`改名為`Button.module.css`
+
+然後，把引入 css 的地方改成這樣
+
+```diff js:Button.js
+-import './Button.module.css';
++import styles from './Button.module.css';
+```
+
+接下來，把 JSX 的`className`調整成這樣
+
+```diff js:Button.js
+-return <button className="button"></button>
++return <button className={styles.button}></button>
+```
+
+Button.module.css 內容大概是這樣
+
+```css:Button.module.css
+.button {
+  font: inherit;
+  ...
+}
+
+.button:focus {
+  outline: none;
+}
+
+.button:hover,
+.button:active {
+  background: #ac0e77;
+  ...
+}
+
+```
+
+CSS Module 會把對象的 CSS 檔案裡面的 class 作為物件，因為檔案使用了`.button`，所以在 JSX 要寫成`className={styles.button}`
+
+#### CSS Module dynamic style
+
+當 css 有涉入條件判斷時的寫法
+
+```css:CourseInput.module.css
+.form-control {
+  margin: 0.5rem 0;
+}
+
+...省略...
+
+.form-control.invalid label {
+  color: red;
+}
+```
+
+```js:CourseInput.js
+import styles from './CourseInput.module.css';
+
+function CourseInput(props) {
+  return (
+    <div className={`${styles['form-control']} ${!isValid && styles.invalid}`}>
+      <label htmlFor="goal">Course Goal</label>
+    </div>
+  )
+}
+
+export default CourseInput;
+```

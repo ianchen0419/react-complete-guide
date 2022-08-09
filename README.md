@@ -1,5 +1,7 @@
 # React Complete Guide
 
+https://ianchen0419.github.io/react-complete-guide/index.html
+
 ## Archived Projects
 
 - Expense - https://github.com/ianchen0419/react-complete-guide/tree/expense

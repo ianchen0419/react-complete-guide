@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.css": "/react-complete-guide/couse-goal/static/css/main.e0980e97.css",
-    "main.js": "/react-complete-guide/couse-goal/static/js/main.d7dc12d9.js",
-    "index.html": "/react-complete-guide/couse-goal/index.html",
-    "main.e0980e97.css.map": "/react-complete-guide/couse-goal/static/css/main.e0980e97.css.map",
-    "main.d7dc12d9.js.map": "/react-complete-guide/couse-goal/static/js/main.d7dc12d9.js.map"
+    "main.css": "/react-complete-guide/course-goal/static/css/main.e0980e97.css",
+    "main.js": "/react-complete-guide/course-goal/static/js/main.d7dc12d9.js",
+    "index.html": "/react-complete-guide/course-goal/index.html",
+    "main.e0980e97.css.map": "/react-complete-guide/course-goal/static/css/main.e0980e97.css.map",
+    "main.d7dc12d9.js.map": "/react-complete-guide/course-goal/static/js/main.d7dc12d9.js.map"
   },
   "entrypoints": [
     "static/css/main.e0980e97.css",

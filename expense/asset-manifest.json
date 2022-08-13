@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/react-complete-guide/expense/static/css/main.f65328a4.css",
+    "main.js": "/react-complete-guide/expense/static/js/main.0564b886.js",
+    "index.html": "/react-complete-guide/expense/index.html",
+    "main.f65328a4.css.map": "/react-complete-guide/expense/static/css/main.f65328a4.css.map",
+    "main.0564b886.js.map": "/react-complete-guide/expense/static/js/main.0564b886.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f65328a4.css",
+    "static/js/main.0564b886.js"
+  ]
+}

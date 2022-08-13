@@ -1,6 +1,8 @@
 # React Complete Guide
 
-https://ianchen0419.github.io/react-complete-guide/index.html
+Demo sites
+
+- Couse Goal: https://ianchen0419.github.io/react-complete-guide/couse-goal/index.html
 
 ## Archived Projects
 

@@ -14,7 +14,6 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "see": "gh-pages --help",
     "deploy": "npm run build && gh-pages -d build -m \"Updates --skip-ci\" -e \"course-goal\"",
     "start": "react-scripts start",
     "build": "react-scripts build",

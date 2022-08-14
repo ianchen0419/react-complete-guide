@@ -4,7 +4,7 @@ Demo sites
 
 - Expense: https://ianchen0419.github.io/react-complete-guide/expense/index.html
 - Couse Goal: https://ianchen0419.github.io/react-complete-guide/course-goal/index.html
-- Couse Goal: https://ianchen0419.github.io/react-complete-guide/user-age/index.html
+- User Age: https://ianchen0419.github.io/react-complete-guide/user-age/index.html
 
 ## Archived Projects
 

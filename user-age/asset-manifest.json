@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/react-complete-guide/user-age/static/css/main.1b945c90.css",
+    "main.js": "/react-complete-guide/user-age/static/js/main.c36d4679.js",
+    "index.html": "/react-complete-guide/user-age/index.html",
+    "main.1b945c90.css.map": "/react-complete-guide/user-age/static/css/main.1b945c90.css.map",
+    "main.c36d4679.js.map": "/react-complete-guide/user-age/static/js/main.c36d4679.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.1b945c90.css",
+    "static/js/main.c36d4679.js"
+  ]
+}

@@ -1160,3 +1160,11 @@ function AddUser(props) {
 ```
 
 當`<input />`搭配`ref`使用，他就會變成 Uncontrolled Component，他的行為不是被 React 控制住
+
+### Side Effects
+
+Side Effects 是相對於 Main Jobs 的概念，React 的 Main Job 是處理畫面渲染、表單互動，Side Effects 則是指這以外的事情，諸如 HTTP Request, setTimeout
+
+Side Effects 的處理過程會在 React 的元件渲染流程外面，所以 React 元件通常捕捉不到 Side Effects，因此要使用`useEffect()`特別處理 Side Effects
+
+`userEffect()`的第一個參數是一個 callback 函數，如果條件通過的話，就會執行這個 callback（這個 callback 裡面可以放 Side Effects 相關的程式），第二個參數是陣列，裡面描述了條件

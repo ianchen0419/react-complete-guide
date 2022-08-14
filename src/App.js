@@ -1,22 +1,29 @@
 import React, { useState } from 'react';
 
-import AddUser from './components/Users/AddUser';
-import UsersList from './components/Users/UsersList';
+import Login from './components/Login/Login';
+import Home from './components/Home/Home';
+import MainHeader from './components/MainHeader/MainHeader';
 
 function App() {
-  const [usersList, setUsersList] = useState([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  function addUserHandler(uName, uAge) {
-    setUsersList((prevUsersList) => [
-      ...prevUsersList,
-      { name: uName, age: uAge, id: Math.random().toString() },
-    ]);
+  function loginHandler(email, password) {
+    // We should of course check email and password
+    // But it's just a dummy/ demo anyways
+    setIsLoggedIn(true);
+  }
+
+  function logoutHandler() {
+    setIsLoggedIn(false);
   }
 
   return (
     <>
-      <AddUser onAddUser={addUserHandler} />
-      <UsersList users={usersList} />
+      <MainHeader isAuthenticated={isLoggedIn} onLogout={logoutHandler} />
+      <main>
+        {!isLoggedIn && <Login onLogin={loginHandler} />}
+        {isLoggedIn && <Home onLogout={logoutHandler} />}
+      </main>
     </>
   );
 }

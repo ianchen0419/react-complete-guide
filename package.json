@@ -1,6 +1,6 @@
 {
   "name": "react-complete-guide",
-  "homepage": "https://ianchen0419.github.io/react-complete-guide/user-age",
+  "homepage": "https://ianchen0419.github.io/react-complete-guide/login-panel",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -14,7 +14,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "deploy": "npm run build && gh-pages -d build -m \"Updates --skip-ci\" -e \"user-age\"",
+    "deploy": "npm run build && gh-pages -d build -m \"Updates --skip-ci\" -e \"login-panel\"",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

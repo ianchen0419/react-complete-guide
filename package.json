@@ -1,6 +1,6 @@
 {
   "name": "react-complete-guide",
-  "homepage": "https://ianchen0419.github.io/react-complete-guide/course-goal",
+  "homepage": "https://ianchen0419.github.io/react-complete-guide/user-age",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -14,8 +14,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "see": "gh-pages --help",
-    "deploy": "npm run build && gh-pages -d build -m \"Updates --skip-ci\" -e \"course-goal\"",
+    "deploy": "npm run build && gh-pages -d build -m \"Updates --skip-ci\" -e \"user-age\"",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

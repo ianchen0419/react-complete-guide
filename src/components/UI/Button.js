@@ -1,12 +1,10 @@
-import React from 'react';
-
-import styles from './Button.module.css';
+import classes from './Button.module.css';
 
 function Button(props) {
   return (
     <button
       type={props.type === 'submit' ? 'submit' : 'button'}
-      className={styles.button}
+      className={classes.button}
       onClick={props.onClick}
     >
       {props.children}

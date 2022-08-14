@@ -748,3 +748,46 @@ function CourseInput(props) {
 
 export default CourseInput;
 ```
+
+## Custom Element and CSS Module
+
+原生的 HTML Tag（像是`<button>`、`<div>`），React 都會幫忙處理好 CSS Module
+但是自製的 Custom Element（像是`<Card/>`），React 不會幫忙做 CSS Module，所以要額外處理
+
+Card 元件：需要引入自己的 CSS（`card.module.css`），也要幫忙看他給其他元件用的時候被加上什麼 className（使用`props.className`處理）
+
+```js:Card.js
+import classes from './card.module.css';
+
+function Card(props) {
+  return (
+    <div className={`${classes.card} ${props.className}`}>
+      {props.children}
+    </div>
+  )
+}
+
+export default Card;
+```
+
+AddUser 元件（引用 Card 元件）
+
+```js:AddUser
+import classes from './AddUser.module.css';
+
+function AddUser() {
+  <Card className={classes.input}>
+    <input type="text" />
+  </Card>
+}
+
+export default AddUser;
+```
+
+搭配的`AddUser.module.css`
+
+```css:AddUser.module.css
+.input {
+  margin: 2rem auto;
+}
+```

@@ -791,3 +791,370 @@ export default AddUser;
   margin: 2rem auto;
 }
 ```
+
+## JSX Root Element
+
+JSX 只能允許一個 root element，所以這樣的程式碼是錯的
+
+```js
+return (
+   <h2>Hi</h2>
+   <p>Good</p>
+   { !isGood && <p>Are you OK?</p>}
+);
+```
+
+解法(1)：使用另一個 root element 包覆
+
+```js
+return (
+  <div>
+    <h2>Hi</h2>
+    <p>Good</p>
+    {!isGood && <p>Are you OK?</p>}
+  </div>
+);
+```
+
+解法(2)：改成 Array 格式（）
+
+- 要記得加上逗號`,`
+- 每個 Item Element 要加上`key`
+- 條件是內容不用使用大括號`{}`包覆
+
+```js
+return [
+  <h2 key="heading">Hi</h2>,
+  <p key="content">Good</p>,
+  !isGood && <p>Are you OK?</p>,
+];
+```
+
+解法(3)：使用 Wrapper.js
+（用法跟用`<div>`包差不多，但是可以解決 div soup 的問題）
+
+```js:Wrapper.js
+function Wrapper(props) {
+  return props.children;
+}
+
+export default Wrapper;
+```
+
+```js
+import Wrapper from './Wrapper.js';
+
+return (
+  <Wrapper>
+    <h2>Hi</h2>
+    <p>Good</p>
+    {!isGood && <p>Are you OK?</p>}
+  </Wrapper>
+);
+```
+
+解法(4)：使用 React.Fragment
+
+```js
+return (
+  <React.Fragment>
+    <h2>Hi</h2>
+    <p>Good</p>
+    {!isGood && <p>Are you OK?</p>}
+  </React.Fragment>
+);
+```
+
+或也可寫成這樣
+
+```js
+return (
+  <>
+    <h2>Hi</h2>
+    <p>Good</p>
+    {!isGood && <p>Are you OK?</p>}
+  </>
+);
+```
+
+也可寫成這樣
+
+```js
+import React, { useState, Fragment } from 'react';
+
+return (
+  <Fragment>
+    <h2>Hi</h2>
+    <p>Good</p>
+    {!isGood && <p>Are you OK?</p>}
+  </Fragment>
+);
+```
+
+### React Portals
+
+在這個範例中，`Modal`被放進去`Form`元件內，這不太合適，因為`Modal`是 overlay 類型的元件，他適合被放在最外層（body 的 direct children），而不是被塞入元件內
+
+```js:Form.js
+return (
+  <>
+    <Modal>
+    <p>content</p>
+  </>
+)
+```
+
+利用 React Protals，可以將 overlay 類型的元件放到最外層
+
+首先，修改 public/index.html
+
+```diff html:public/index.html
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
++ <div id="backdrop -root"></div>
++ <div id="overlay-root"></div>
+  <div id="root"></div>
+</body>
+```
+
+然後，修改 ErrorModal.js，建立另一個 Function Component
+`Backdrop`，並且把原本藏在 ErrorModal 裡面的 backgrop 的 jsx 移出去
+
+```diff js:src/components/UI/ErrorModal.js
+
++function Backdrop(props) {
++ return <div className={classes.backdrop} onClick={props.onConfirm} role="presentation"></div>
++}
+
+function ErrorModal(props) {
+  return (
+   <>
+-     <div
+-       className={classes.backdrop}
+-       onClick={props.onConfirm}
+-       role="presentation"
+-     ></div>
+      <Card className={classes.modal}>
+        <header className={classes.header}>
+          <h2>{props.title}</h2>
+        </header>
+        <div className={classes.content}>
+          <p>{props.message}</p>
+        </div>
+        <footer className={classes.actions}>
+          <Button onClick={props.onConfirm}>Okay</Button>
+        </footer>
+      </Card>
+   </>
+  );
+}
+```
+
+接著，建立 ModalOverlay，並且把 Modal 部分移進去
+
+```diff js:src/components/UI/ErrorModal.js
+function Backdrop(props) {
+  return (
+    <div
+      className={classes.backdrop}
+      onClick={props.onConfirm}
+      role="presentation"
+    ></div>
+  );
+}
+
++function ModalOverlay(props) {
++  <Card className={classes.modal}>
++      <header className={classes.header}>
++        <h2>{props.title}</h2>
++      </header>
++      <div className={classes.content}>
++        <p>{props.message}</p>
++      </div>
++      <footer className={classes.actions}>
++        <Button onClick={props.onConfirm}>Okay</Button>
++      </footer>
++    </Card>
++}
+
+function ErrorModal(props) {
+  return (
+    <>
+-    <Card className={classes.modal}>
+-      <header className={classes.header}>
+-        <h2>{props.title}</h2>
+-      </header>
+-      <div className={classes.content}>
+-        <p>{props.message}</p>
+-      </div>
+-      <footer className={classes.actions}>
+-        <Button onClick={props.onConfirm}>Okay</Button>
+-      </footer>
+-    </Card>
+  </>
+  );
+}
+```
+
+然後，引入 ReactDOM，並且在原本的 ErrorModal 內容裡面，使用`ReactDOM.createPortal()`
+
+`ReactDOM.createPortal()`的第一個參數是要渲染的 ReactNode，第二個參數是指向實際的 Real DOM
+
+```diff js:src/components/UI/ErrorModal.js
++import ReactDOM from 'react-dom';
+
+...省略...
+
+function ErrorModal(props) {
+  return (
+    <>
++      {ReactDOM.createPortal(<Backdrop onConfirm={props.onConfirm} />, document.getElementById('backdrop-root'))}
+    </>
+  )
+}
+```
+
+最後，把`ModalOverlay`寫進去，要幫忙傳遞原本的`props.title`、`props.message`、`props.onConfirm`參數
+
+```diff js:src/components/UI/ErrorModal.js
+...省略...
+
+function ErrorModal(props) {
+  return (
+    <>
+      {ReactDOM.createPortal(<Backdrop onConfirm={props.onConfirm} />, document.getElementById('backdrop-root'))}
++      {ReactDOM.createPortal(
++        <ModalOverlay
++          title={props.title}
++          message={props.message}
++          onConfirm={props.onConfirm}
++        />,
++        document.getElementById('overlay-root'),
+      )}
+    </>
+  )
+}
+```
+
+### React Refs
+
+可以使用 Refs 直接獲取 DOM
+
+首先，引入 `useRef`
+
+```diff js:src/components/Users/AddUser.js
+-import React, { useState } from 'react';
++import React, { useState, useRef } from 'react';
+
+```
+
+然後在 Function Component 底下使用`useRef()`
+
+```diff js:src/components/Users/AddUser.js
+function AddUser(props) {
++  const nameInputRef = useRef();
++  const ageInputRef = useRef();
+}
+```
+
+接著，對目標的 ReactNode 使用`ref`指向定義好的`useRef()`
+
+```diff js:src/components/Users/AddUser.js
+function AddUSer(props) {
+  ...省略...
+
+  return (
+    <>
++     <input id="username" ref={nameInputRef}>
++     <input id="age" ref={ageInputRef}>
+    </>
+  )
+}
+```
+
+這樣就完成了，可以在`addUserHandler()`裡面`console.log`看看
+
+```js:src/components/Users/AddUser.js
+function AddUSer(props) {
+  ...省略...
+
+  function addUserHandler(event) {
+    console.log(nameInputRef, ageInputRef);
+  }
+}
+
+```
+
+可以使用`nameInputRef.current.value`抓到現在的值，並且將`enteredUsername`代換掉
+
+```diff js:src/components/Users/AddUser.js
+function AddUSer(props) {
+  function addUserHandler(event) {
++    const nameRefValue = nameInputRef.current.value
++    const ageRefValue = ageInputRef.current.value
+
+-    if (enteredUsername.trim().length === 0 || enteredAge.trim().length === 0) {
++    if (nameRefValue.trim().length === 0 || ageRefValue.trim().length === 0) {
+      ...省略
+    }
+
+-    if (+enteredAge < 1) {
++    if (+ageRefValue < 1) {
+      ...省略
+    }
+
+-    props.onAddUser(enteredUsername, enteredAge);
++    props.onAddUser(nameInputRef, ageRefValue);
+  }
+}
+```
+
+也可以用 Refs 的方式完成 Reset 邏輯
+
+```diff js:src/components/Users/AddUser.js
+function AddUser(props) {
+-  const [enteredUsername, setEnteredUsername] = useState('');
+-  const [enteredAge, setEnteredAge] = useState('');
+
+  ...省略
+
+  function addUserHandler(event) {
+    ...省略
+-    setEnteredUsername('');
+-    setEnteredAge('');
+
+
++    nameInputRef.current.value = '';
++    ageInputRef.current.value = '';
+  }
+
+-  function usernameChangeHandler(event) {
+-    setEnteredUsername(event.target.value);
+-  }
+
+-  function ageChangeHandler(event) {
+-    setEnteredAge(event.target.value);
+-  }
+
+  return (
+    <>
+      <input
+-       onChange={usernameChangeHandler}
+-       value={enteredUsername}
+        id="username"
+        type="text"
+        ref={nameInputRef}
+      />
+      <input
+-       onChange={ageChangeHandler}
+-       value={enteredAge}
+        id="age"
+        type="number"
+        ref={ageInputRef}
+      />
+    </>
+  )
+}
+```
+
+當`<input />`搭配`ref`使用，他就會變成 Uncontrolled Component，他的行為不是被 React 控制住

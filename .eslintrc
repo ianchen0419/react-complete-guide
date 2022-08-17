@@ -23,13 +23,7 @@
     ],
     "react/prop-types": "off",
     "react/destructuring-assignment": "off",
-    "object-curly-newline": [
-      "error",
-      {
-        "ImportDeclaration": "never"
-      }
-    ],
-    "no-unused-vars": "warn",
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
     "react/self-closing-comp": [
       "error",
       {

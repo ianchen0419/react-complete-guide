@@ -9,6 +9,7 @@
   align-items: center;
   background: #741188;
   padding: 0 2rem;
+  box-sizing: border-box;
 }
 
 .main-header h1 {

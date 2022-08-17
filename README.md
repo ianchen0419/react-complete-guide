@@ -14,8 +14,6 @@ Demo sites
 
 ## Airbnb ESLint Rules
 
-https://github.com/airbnb/javascript/tree/master/packages/eslint-config-airbnb-base/rules
-
 ## Learning Memo
 
 ### props
@@ -1168,3 +1166,583 @@ Side Effects 是相對於 Main Jobs 的概念，React 的 Main Job 是處理畫�
 Side Effects 的處理過程會在 React 的元件渲染流程外面，所以 React 元件通常捕捉不到 Side Effects，因此要使用`useEffect()`特別處理 Side Effects
 
 `userEffect()`的第一個參數是一個 callback 函數，如果條件通過的話，就會執行這個 callback（這個 callback 裡面可以放 Side Effects 相關的程式），第二個參數是陣列，裡面描述了條件
+
+在這段程式中，使用`setIsLoggedIn`控制使用者是否登入，如果已登入的話會換成主頁面，未登入的話是登入頁。但是因為這頁如果登入到了主頁面，直接 Refresh 會回到未登入的狀態，造成使用體驗差，所以另外使用了`localStorage`暫存登入的狀態，避免重複的登入
+
+```js:App.js
+function App() {
+  const storedUserLoggedInInformation = localStorage.getItem('isLoggedIn');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  if (storedUserLoggedInInformation === 1) {
+    setIsLoggedIn(true);
+  }
+}
+```
+
+但是這段程式有個問題，假如今天有人真的是已登入，然後又重新刷新網頁，那麼`isLoggedIn`會先被設定為`false`，接著在由於有`localStorage`的關係在被設定為`true`，造成無謂的浪費
+
+可以利用`userEffect()`改寫，將判斷`localStorage`是否存在這段移動到`useEffect()`之中
+
+- `useEffect()`會發生在 Component Evaluation 之後，也就是說他會被最後執行
+- 只有在指定的 dependency（`userEffect()`的第二個參數）成立，才會執行`userEffect()`的 callback
+
+在這個範例中，由於 dependency 為空，所以 callback 只會執行一次而已
+
+```diff js:App.js
+function App() {
+- const storedUserLoggedInInformation = localStorage.getItem('isLoggedIn');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+-  if (storedUserLoggedInInformation === '1') {
+-    setIsLoggedIn(true);
+-  }
+
++  useEffect(() => {
++    const storedUserLoggedInInformation = localStorage.getItem('isLoggedIn');
++
++    if (storedUserLoggedInInformation === '1') {
++      setIsLoggedIn(true);
++    }
++  }, []);
+}
+
+```
+
+`useEffect()`也可以用來簡化重複的程式，下面的程式，`setFormIsValid`重複了很多次，我們可以統一放在`useEffect()`裡面，這次由於 dependecy 指定了`[enteredEmail, enteredPassword]`，表示這段`useEffect()`在`enteredEmail`或是`enteredPassword`變更的時候會再執行一次。
+
+```diff js:Login.js
+function Login() {
+
++  useEffect(() => {
++    setFormIsValid(
++      enteredEmail.includes('@') && enteredPassword.trim().length > 6,
++    );
++  }, [enteredEmail, enteredPassword]);
+
+  function emailChangeHandler(event) {
+    setEnteredEmail(event.target.value);
+
+-    setFormIsValid(
+-      event.target.value.includes('@') && enteredPassword.trim().length > 6,
+-    );
+  }
+
+  function passwordChangeHandler(event) {
+    setEnteredPassword(event.target.value);
+
+-    setFormIsValid(
+-      event.target.value.trim().length > 6 && enteredEmail.includes('@'),
+-    );
+  }
+}
+```
+
+### useEffect Cleanup
+
+上個範例的 Login.js 當中的`useEffect()`存在一個問題，每當使用者輸入輸入框，只要他輸入一個字，就會觸發 useEffect，如果這隻程式有發送 HTTP Reuqest，那麼他會造成不必要的浪費
+
+其中一個解法是`setTimeout()`
+
+```diff js:Login.js
+useEffect(() => {
++  setTimeout(() => {
+    setFormIsValid(
+      enteredEmail.includes('@') && enteredPassword.trim().length > 6,
+    );
++  }, 500);
+}, [enteredEmail, enteredPassword]);
+```
+
+useEffect()的第一個參數 callback，裡面可以呼叫 return，但是 return 必須接一個函數，他稱為 Cleanup function。他可以做 Cleanup process，在前面的 useEffect 完成之後，新的 useEffect 執行之前，執行 cleanup funcion
+
+所以流程會是這樣
+
+1. 使用者輸入輸入框
+2. 執行 setFormIsValid
+3. 休息 10 秒
+4. 使用者再次輸入輸入框
+5. **執行 Cleanup proccess**
+6. 執行 setFormIsValid
+
+由於`setTimeout()`對於連續的執行會有點 buggy，所以我們可以在 Cleanup proccess 清除舊的`setTimeout()`
+
+```diff js:Login.js
+useEffect(() => {
+-  setTimeout(() => {
++  const identifier = setTimeout(() => {
+    setFormIsValid(
+      enteredEmail.includes('@') && enteredPassword.trim().length > 6,
+    );
+  }, 500);
+
++  return () => {
++    clearInterval(identifier);
++  };
+}, [enteredEmail, enteredPassword]);
+```
+
+結果：Cleanup function 依然會執行超多次，但是 useEffect 被`setTimeout()`包起來的那段只會每隔 0.5 秒執行一次
+
+如果`useEffect()`的 dependency 什麼都不加的話，那這個 useEffect 會在每次 Component 運作前都運行，所以他會運行很多次，這顆元件會這樣：
+
+1. 進入畫面，元件開始動作
+2. 印出`Effect running`
+3. 元件執行 render
+4. 使用者操作輸入框，觸發元件機制
+5. 印出`Effect running`
+6. 元件完成輸入框 Reactive 機制
+
+```js:Login.js
+function Login() {
+  useEffect(() => {
+    console.log('Effect running');
+  });
+}
+```
+
+### useReducer
+
+這段程式中的`setFormIsValid()`不好，因為由於 React 執行 State Update 順序的關係，他執行的時候，可能不會抓到最新的`enteredPassword`。所以這邊適合用`useReducer`代替`useState`，適合使用`useReducer`的情境如下：
+
+- 處理兩個關係密切的`useState`（例如`enteredEmail`, `emailIsValid`）
+- 兩個`useState`互相具有依賴關係
+
+Reducer 的概念：定義一個 State，但是這個 State 的內容是由另一個 State 所決定
+
+```js:Login.js
+function Login() {
+  function emailChangeHandler(event) {
+    setEnteredEmail(event.target.value);
+
+    setFormIsValid(
+      event.target.value.includes('@') && enteredPassword.trim().length > 6,
+    );
+  }
+}
+```
+
+`useReducer`的語法
+
+```js
+const [state, dispatchFn] = useReducer(reducerFn, initialState, initFn);
+```
+
+這個範例中，可以看到`emailIsValid`的值是被`enteredEmail`決定，這兩個 state 具備依賴關係。`emailReducer`可以完全放在外面，因為這個函示不需要任何元件內的東西。
+
+```diff js:Login.js
+- import React, { useState } from 'react';
++ import React, { useState, useReducer } from 'react';
+
++function emailReducer(state, action) {
++  if (action.type === 'USER_INPUT') {
++    return { value: action.val, isValid: action.val.includes('@') };
++  }
+
++  if (action.type === 'INPUT_BLUR') {
++    return { value: state.value, isValid: state.value.includes('@') };
++  }
+
++  return { value: '', isValid: false };
++}
+
+function Login() {
+-  const [enteredEmail, setEnteredEmail] = useState('');
+-  const [emailIsValid, setEmailIsValid] = useState();
+
++  const [emailState, dispatchEmail] = useReducer(emailReducer, {
++    value: '',
++    isValid: null,
++  });
+
+  function emailChangeHandler(event) {
+-    setEnteredEmail(event.target.value);
+     // 在原本做變更的地方改用dispatch
++    dispatchEmail({ type: 'USER_INPUT', val: event.target.value });
+
+
+    setFormIsValid(
+-      event.target.value.includes('@') && enteredPassword.trim().length > 6,
++      emailState.value.includes('@') && enteredPassword.trim().length > 6,
+    );
+  }
+
+  function validateEmailHandler() {
+-    setEmailIsValid(enteredEmail.includes('@'));
++    dispatchEmail({ type: 'INPUT_BLUR' });
+  }
+}
+
+```
+
+### Context API
+
+從下面這 3 個範例可以看出，他一層一層傳遞`isLoggedIn`這個狀態，總共跨了 3 層，如果專案非常複雜，這樣做會不好管理，而且這種傳遞方式只適用在子孫關係，兄弟關係的元件就不適用
+
+```js:App.js
+return <MainHeader isAuthenticated={isLoggedIn} onLogout={logoutHandler} />;
+```
+
+```js:MainHeader.js
+return <Navigation isLoggedIn={props.isAuthenticated} onLogout={props.onLogout} />;
+```
+
+```js:Navigation.js
+return (
+  <nav className={classes.nav}>
+    <ul>
+      {props.isLoggedIn && (
+        <li>
+          <a href="/">Users</a>
+        </li>
+      )}
+      {props.isLoggedIn && (
+        <li>
+          <a href="/">Admin</a>
+        </li>
+      )}
+      {props.isLoggedIn && (
+        <li>
+          <button type="button" onClick={props.onLogout}>
+            Logout
+          </button>
+        </li>
+      )}
+    </ul>
+  </nav>
+);
+```
+
+Context 可以無視階層關係，做出一個所有元件都可以 access 的資料層，儲存 State 狀態
+
+首先在`src`底下建立新資料夾：`context`（或可以命名為`store`或是`state`），然後在`context`底下新增`auth-context.js`（之所以不命名為`AuthContext.js`是因為 Camel Case 會代表元件，但這隻只是用來存資料）
+
+```js:src/context/auth-context.js
+import React from 'react';
+
+const AuthContext = React.createContext({
+  isLoggedIn: false,
+});
+
+export default AuthContext;
+```
+
+然後在需要監聽的元件上使用，用法是把目標元件包進`<AuthContext.Provider></AuthoContext.Provider>`裡面
+
+```diff js:App.js
+return (
+-  <>
++   <AuthContext.Provider>
+      <MainHeader isAuthenticated={isLoggedIn} onLogout={logoutHandler} />
+      <main>
+        {!isLoggedIn && <Login onLogin={loginHandler} />}
+        {isLoggedIn && <Home onLogout={logoutHandler} />}
+      </main>
++   </AuthContext.Provider>
+-  </>
+);
+```
+
+因為包了`<AuthContext.Provider>`，所以裡頭的元件，跟元件的小孩們，現在都可以存取到
+
+Context 的監聽有兩種：Context Consumer 跟 useContext Hook（通常使用 React Hook 居多）
+
+### Context Consumer
+
+將目標元件包覆在`<AuthContext.Consumer>`底下，並且寫好 Consumer Child（需要是一個函式），Consumer Child 的第一個參數`ctx`，會指向定義好的 AuthContext 內容
+
+```diff js:Navigation.js
+return (
++  <AuthContext.Consumer>
++   {(ctx) => {
++
++   }}
+    <nav className={classes.nav}>
+      <ul>
+        {props.isLoggedIn && (
+          <li>
+            <a href="/">Users</a>
+          </li>
+        )}
+        {props.isLoggedIn && (
+          <li>
+            <a href="/">Admin</a>
+          </li>
+        )}
+        {props.isLoggedIn && (
+          <li>
+            <button type="button" onClick={props.onLogout}>
+              Logout
+            </button>
+          </li>
+        )}
+      </ul>
+    </nav>
++ </AuthContext.Consumer>
+);
+```
+
+然後，因為 Consumer Child 需要回傳這個元件的內容，所以把原本元件的 jsx 搬到 Consumer Child 裡面去，並且把`props.isLoggedIn`都改成`ctx.props.isLoggedIn`
+
+```diff js:Navigation.js
+return (
+  <AuthContext.Consumer>
+    {(ctx) => (
+      <nav className={classes.nav}>
+        <ul>
+-         {props.isLoggedIn && (
++         {ctx.isLoggedIn && (
+            <li>
+              <a href="/">Users</a>
+            </li>
+          )}
+-         {props.isLoggedIn && (
++         {ctx.isLoggedIn && (
+            <li>
+              <a href="/">Admin</a>
+            </li>
+          )}
+-         {props.isLoggedIn && (
++         {ctx.isLoggedIn && (
+            <li>
+              <button type="button" onClick={props.onLogout}>
+                Logout
+              </button>
+            </li>
+          )}
+        </ul>
+      </nav>
+    )}
+  </AuthContext.Consumer>
+);
+```
+
+最後，回到 App.js，設定 Provider 的初始值
+
+```diff js:App.js
+return (
+-  <AuthContext.Provider>
++  <AuthContext.Provider value={{
++    isLoggedIn: isLoggedIn
++  }}>
+)
+```
+
+然後可以把用不到的`props`都移掉，完成！
+
+### useContext Hook
+
+修改 Navigation.js，引入`useContext`，然後調用`useContext()`，並且存為`ctx`，然後用`ctx`取代`props`
+
+```js:Navigation.js
+import React, { useContext } from 'react';
+
+function Navigation() {
+  const ctx = useContext(AuthContext);
+}
+```
+
+### Dynamic Context
+
+可以取代`props.onLogout`的方法
+
+首先，先把舊的`props.onLogout`刪除
+
+```diff js:App.js
+return (
+-  <MainHeader onLogout={logoutHandler} />
++  <MainHeader />
+)
+```
+
+```diff js:MainHeader.js
+return (
+-  <Navigation onLogout={props.onLogout} />
++  <Navigation />
+)
+```
+
+然後，擴增`AuthContext Provider`的初始設定
+
+```diff js:App.js
+return (
+  <AuthContext.Provider value={{
+    isLoggedIn: isLoggedIn,
++   onLogout: logoutHandler,
+  }}>
+)
+```
+
+這樣設定好後，所有監聽`AuthContext`的元件，都可以拿到`ctx.logoutHandler`這個函式了
+
+基本上資料的傳遞都是優先選擇用`props`，除非遇到一個資料要傳給很多元件，或者是要傳資料給某特殊元件（例如：Navigation）
+
+## Context 優化
+
+備註：雖然這樣設定就完成了 Dynamic Context，但是因為平常在使用的時候，如果輸入`ctx`，出現的 autocomplete 候選清單裡面不會有`onLogout`，所以為了提升使用體驗，我們可以在`auth-context.js`加上`onLogout`，只需要填入空 function 就可以了
+
+```diff js:auth-context.js
+const AuthContext = React.createContext({
+  isLoggedIn: false,
++ onLogout: () => {}
+});
+```
+
+另外，也可以將 AuthContext.Provider 搬進去 auth-context.js 裡面，這樣就不用把邏輯寫在 App.js。首先將 auth-context.js 加入 AuthContextProvider 部分
+
+```js:auth-context.js
+export function AuthContextProvider(props) {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const storedUserLoggedInInformation = localStorage.getItem('isLoggedIn');
+
+    if (storedUserLoggedInInformation === '1') {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  function logoutHandler() {
+    localStorage.removeItem('isLoggedIn');
+    setIsLoggedIn(false);
+  }
+
+  function loginHandler() {
+    localStorage.setItem('isLoggedIn', '1');
+    setIsLoggedIn(true);
+  }
+
+  const defaultContextValue = useMemo({
+    isLoggedIn,
+    onLogout: logoutHandler,
+    onLogin: loginHandler,
+  });
+
+  return (
+    <AuthContext.Provider value={defaultContextValue}>
+      {props.children}
+    </AuthContext.Provider>
+  );
+}
+```
+
+然後移除 App.js 的邏輯部分、<AuthContext>部分
+
+接著，打開 index.js，修改這段
+
+```diff js:index.js
+-root.render(
+  <React.StrictMode>
++   <AuthContextProvider>
+      <App />
++   </AuthContextProvider>
+  </React.StrictMode>,
+);
+```
+
+最後，在 App.js 加入`useContext()`
+
+```js:App.js
+function App() {
+  const ctx = useContext(AuthContext);
+}
+```
+
+### Context 的限制
+
+如果將 Context 使用在 UI 元件上（例如：`Button.js`），然後定義了`onClick={logoutHandler}`事件，那麼這個元件的 click 就只能提供 logoutHandler，沒辦法做其他用途。所以當寫 UI 元件時，應該使用`props`而不是 Context
+
+另外，Context 如果應用在需要頻繁存取的狀況，也是不適合（可能會很慢）
+
+### Hooks
+
+像是`useState`、`useEffect`這種 use 開頭的叫做 hook，hooks 的使用規則有：
+
+要用 hooks 要放在 React Function 內，React Function 有：
+
+- React Component Function
+- Custom Hooks
+
+另外，Hooks 只能放在 React Function 的第一層裡，不能放在 block statements 裡面，也不能放在 nested function 裡面
+
+最後，當使用`useEffect()`的時候，可以將 useEffect 裡頭用到的所有變數等等，加進去 dependency
+
+### Forward Refs (useRef)
+
+可以呼叫 Components 裡面的函式
+
+例如，在 Login.js 的 submitHandler，多加一個判斷，確認所有的輸入框是否通過驗證，如果通過，就執行 onLogin，但是如果不通過，要 focus 第一個輸入框，如果是原生的`<input />`可以直接執行`focus()`，但是由於我們的`<Input/>`是一個元件，所以必須自己做這個`focus()`
+
+改寫 Input.js：
+
+1. 引入`useRef`，並且定義`active()`
+2. 在 JSX 把`ref`串起來
+3. Function Component 新增第二個參數：`ref`，引入`useImperativeHandle`並且使用它
+4. 將整個 Function Component 用`React.forwardRef`包起來
+
+```js:Input.js
+import React, { useRef, useImperativeHandle } from 'react';
+import classes from './Input.module.css';
+
+function Input(props, ref) {
+  const inputRef = useRef();
+
+  function activate() {
+    inputRef.current.focus();
+  }
+
+  useImperativeHandle(ref, () => ({
+    focus: activate,
+  }));
+
+  return (
+    <div
+      className={`${classes.control} ${
+        props.isValid === false ? classes.invalid : ''
+      }`}
+    >
+      <label htmlFor={props.id}>{props.label}</label>
+      <input
+        ref={inputRef}
+        type={props.type}
+        id={props.id}
+        value={props.value}
+        onChange={props.onChange}
+        onBlur={props.onBlur}
+      />
+    </div>
+  );
+}
+
+export default React.forwardRef(Input);
+```
+
+再來，改寫 Login.js
+
+```js:Login.js
+function Login() {
+  function submitHandler(event) {
+    event.preventDefault();
+    if (formIsValid) {
+      authCtx.onLogin(emailState.value, passwordState.value);
+    } else if (!emailIsValid) {
+      emailInputRef.current.focus();
+    } else {
+      passwordInputRef.current.focus();
+    }
+  }
+
+  return (
+    <Input
+      ref={emailInputRef}
+      id="email"
+      label="E-Mail"
+      type="email"
+      isValid={emailIsValid}
+      value={emailState.value}
+      onChange={emailChangeHandler}
+      onBlur={validateEmailHandler}
+    />
+  )
+}
+```

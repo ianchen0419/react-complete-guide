@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/react-complete-guide/login-panel/static/css/main.619217e7.css",
+    "main.js": "/react-complete-guide/login-panel/static/js/main.31778f76.js",
+    "index.html": "/react-complete-guide/login-panel/index.html",
+    "main.619217e7.css.map": "/react-complete-guide/login-panel/static/css/main.619217e7.css.map",
+    "main.31778f76.js.map": "/react-complete-guide/login-panel/static/js/main.31778f76.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.619217e7.css",
+    "static/js/main.31778f76.js"
+  ]
+}

@@ -6,6 +6,7 @@ Demo sites
 - Couse Goal: https://ianchen0419.github.io/react-complete-guide/course-goal/index.html
 - User Age: https://ianchen0419.github.io/react-complete-guide/user-age/index.html
 - Login Panel: https://ianchen0419.github.io/react-complete-guide/login-panel/index.html
+- React Meals: https://ianchen0419.github.io/react-complete-guide/react-meals/index.html
 
 ## Archived Projects
 
@@ -13,6 +14,7 @@ Demo sites
 - Couse Goal - https://github.com/ianchen0419/react-complete-guide/tree/course-goal
 - User Age - https://github.com/ianchen0419/react-complete-guide/tree/user-age
 - Login Panel - https://github.com/ianchen0419/react-complete-guide/tree/login-panel
+- React Meals - https://github.com/ianchen0419/react-complete-guide/tree/react-meals
 
 ## Airbnb ESLint Rules
 
@@ -1791,3 +1793,7 @@ function Input(props) {
   );
 }
 ```
+
+### Component Update
+
+React 只有在 State、Props、Context 變動的時候，才會重新渲染 UI（re-evaluate）

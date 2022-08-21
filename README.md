@@ -1797,3 +1797,33 @@ function Input(props) {
 ### Component Update
 
 React 只有在 State、Props、Context 變動的時候，才會重新渲染 UI（re-evaluate）
+
+例如，以下這個程式，畫面有一個按鈕「Toggle Paragraph」，只要按下他，可以切換文字的顯示/隱藏，我們在程式中間放一段`console.log('APP RUNNING')`觀看 React 的運作：
+
+```js
+function App() {
+  const [showParagraph, setShowParagraph] = useState(false);
+
+  console.log('APP RUNNING');
+
+  function toggleParagraphHandler() {
+    setShowParagraph((prevShowParagraph) => !prevShowParagraph);
+  }
+
+  return (
+    <div className="App">
+      <h1>Hello CodeSandbox</h1>
+      {showParagraph && <p>Start editing to see some magic happen!</p>}
+      <Button onClick={toggleParagraphHandler}>Toggle Paragraph</Button>
+    </div>
+  );
+}
+```
+
+1. 畫面啟動，印出'APP RUNNING'
+2. 使用者點擊紫色按鈕，印出'APP RUNNING'
+3. 本來被隱藏的文字區塊被顯示出來
+4. 再次點擊紫色按鈕，印出'APP RUNNING'
+5. 文字區塊被隱藏
+
+由此可見，透過操作 state 的變更，可以讓 React Component 再次運作一次

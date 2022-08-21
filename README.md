@@ -1748,3 +1748,46 @@ function Login() {
   )
 }
 ```
+
+### Props Spreading
+
+原本的寫法是這樣
+
+```js
+/**
+ * Input Component
+ *
+ * @example
+ * const inputProps = {
+ *  label: 'Name',
+ *  input: {
+ *    id: 'k1',
+ *    type: 'text',
+ *  }
+ * }
+ * return (
+ *  <Input type={props.input.type} id={props.input.id} />
+ * )
+ */
+function Input(props) {
+  return (
+    <>
+      <label>{props.label}</label>
+      <input type={props.input.type} id={props.input.id} />
+    </>
+  );
+}
+```
+
+可以透過 Spread Syntax [簡寫成這樣
+
+```js
+function Input(props) {
+  return (
+    <>
+      <label>{props.label}</label>
+      <input {...props.input} />
+    </>
+  );
+}
+```

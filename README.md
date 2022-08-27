@@ -1781,7 +1781,7 @@ function Input(props) {
 }
 ```
 
-可以透過 Spread Syntax [簡寫成這樣
+可以透過 Spread Syntax 簡寫成這樣
 
 ```js
 function Input(props) {
@@ -1800,7 +1800,7 @@ React 只有在 State、Props、Context 變動的時候，才會重新渲染 UI�
 
 例如，以下這個程式，畫面有一個按鈕「Toggle Paragraph」，只要按下他，可以切換文字的顯示/隱藏，我們在程式中間放一段`console.log('APP RUNNING')`觀看 React 的運作：
 
-```js
+```js:App.js
 function App() {
   const [showParagraph, setShowParagraph] = useState(false);
 
@@ -1827,3 +1827,1111 @@ function App() {
 5. 文字區塊被隱藏
 
 由此可見，透過操作 state 的變更，可以讓 React Component 再次運作一次
+
+假如今天把`showParagraph`的地方給元件化，我們依然可以看到，每次點紫色按鈕，'APP RUNNING'都會出現一次，即便這次變更的部分是在`<DemoOutput />`元件，但是因為控制 state 的部分是寫在`<App />`，所以依然是執行到`<App />`的程式
+
+```diff js:App.js
+return (
+    <div className="App">
+      <h1>Hello CodeSandbox</h1>
+-     {showParagraph && <p>Start editing to see some magic happen!</p>}
++     <DemoOutput show={showParagraph} />
+      <Button onClick={toggleParagraphHandler}>Toggle Paragraph</Button>
+    </div>
+  );
+```
+
+如果在 DemoOutput 裡面也放 console.log 的話，可以看到這樣
+
+```
+# 執行
+APP Running
+DEMO Running
+
+# 點擊紫色按鈕
+APP Running
+DEMO Running
+
+# 點擊紫色按鈕
+APP Running
+DEMO Running
+```
+
+React 元件的執行順序是由外層開始，再往內層執行
+
+並且，假如把 App.js 的傳給`<DemoApp />`的`onShow`改成固定值 false
+
+```diff js:App.js
+return (
+   ...
+-  <DemoOutput show={showParagraph} />
++  <DemoOutput show={false} />
+)
+
+```
+
+我們依然可以看到，每次點擊紫色按鈕，App 跟 DemoOutput 都會執行
+
+```
+# 執行
+APP Running
+DEMO Running
+
+# 點擊紫色按鈕
+APP Running
+DEMO Running
+
+# 點擊紫色按鈕
+APP Running
+DEMO Running
+```
+
+理由是因為，JSX 的裡面只要寫得像是`<Button>`或是`<DemoApp />`這種，看起來像是靜態 HTML，但是其實都是在執行`Button.js`或是`DemoApp.js`，所以只要 App.js 有變更，就會連帶影響底下的 DemoApp 也重新執行，而 App.js 之所以有變更，是因為裡面的`Button`的`onClick`函式 ，有寫到`useState`的關係
+
+```js:App.js
+function toggleParagraphHandler() {
+  setShowParagraph((prevShowParagraph) => !prevShowParagraph);
+}
+```
+
+透過這個例子可以看到，假如我們把 DemoOutput 再往下拆，那這隻程式在每次點擊紫色按鈕，會執行超多元件，導致浪費效能
+
+### `React.memo`
+
+透過前例可以看到效能浪費的範例，我們可以藉由`React.memo`去告訴元件，何時應該要 re-evaluate，藉此避免效能的浪費
+
+將 DemoOutput.js 的最後一句改成這樣
+
+```diff js:DemoOutput.js
+-export default DemoOutput;
++export default React.memo(DemoOutput);
+```
+
+之後，每次點擊紫色按鈕，DemoOutput 就不會重新 load 了，不過，`React.memo`只有對 Function Component 有效。`React.memo` 會比對舊的`props`跟新的`props`，只有在`props`有發生變化，他才會重新執行。但是`React.memo`會有使用成本，所以不建議在所有元件下使用（需要衡量重新執行元件的成本 vs 比對新舊`props`的成本）
+
+現在，針對 Button.js 使用`React.memo`，並且在 Button.js 裡面放入 console.log 以方便觀察
+
+```diff js:DemoOutput.js
+-export default Button;
++export default React.memo(Button);
+```
+
+但是，如果再次執行程式，我們依然可以看到 Button 的 log 每次按鈕被點到時都會被呼叫
+
+```
+# 執行
+APP Running
+BUTTON Running
+
+# 點擊紫色按鈕
+APP Running
+BUTTON Running
+
+# 點擊紫色按鈕
+APP Running
+BUTTON Running
+```
+
+這是因為，App.js 的程式，雖然看起來沒有變化，但是事實上，每次 React 發生 Re-evaluate 時，他都會重新產生一個`toggleParagraphHandler`，然後在丟進`<Button>`的`onClick`之中，所以每次的`toggleParagraphHandler`都其實是不同的函式，因此，對 Button.js 來說，每次的`props`都不同，就還是一直持續在 re-evaluating
+
+```js:App.js
+function App() {
+  ...
+  function toggleParagraphHandler() {
+    setShowParagraph((prevShowParagraph) => !prevShowParagraph);
+  }
+
+  return(
+    ...
+    <Button onClick={toggleParagraphHandler}>
+    ...
+  )
+
+}
+```
+
+同理，`<DemoOutput show={false}>`也是，雖然我們看`false`都是一樣，但是實際上每次點按鈕時，他都會傳一個新的`false`下去，但是 DemoOutput.js 卻可以透過`React.memo`避開了 re-evaluate，所以
+
+- 如果傳入的`props`是 Primitive Value，例如 Bool、String，在`props`比對的階段，相同的 Value 會被視為一樣，所以可以透過`React.memo`節省不必要的渲染
+- 如果傳入的`props`不是 Primitive Value，例如 Function、Object，即便是寫的一樣的 Function，`props`比對時會當作不同物，所以無法透過`React.memo`節省
+
+Primitive Value 共用以下 7 種
+
+- String
+- Number
+- Boolean
+- BigInr
+- Number
+- Symbol
+- Null
+
+## useCallback
+
+上面的`React.memo`其實是有辦法可以用在非 Primitive Value 上面，但是要搭配`useCallback`使用，`useCallback`可以讓我們跨元件執行地存一個函式（所以每次元件重新執行函式就不會洗掉），useCallback 背後的原理機制是這樣：
+
+```js
+let obj1 = {};
+let obj2 = {};
+
+obj1 === obj2; // false
+
+// useCallbank用複製讓兩個obj可以相等
+obj2 = obj2;
+obj1 === obj2; // true
+```
+
+用法如下，將會造成`React.memo`測不到的 Function 用`useCallback`包起來
+
+```diff js:App.js
+function App() {
+-  function toggleParagraphHandler() {
+-    setShowParagraph((prevShowParagraph) => !prevShowParagraph);
+-  }
++  const toggleParagraphHandler = useCallback(() => {
++    setShowParagraph((prevShowParagraph) => !prevShowParagraph);
++  }, []);
+}
+```
+
+因為包了`useCallback`，所以每次元件重新執行，`useCallback`都會複製前一個函式，然後讓新的 Execution 拿複製好的那個函式去用，所以如果我們知道函式不會變更的話，可以包`useCallback`
+
+這樣加上後，每次按紫色按鈕，Button 的 Log 就不再出現了
+
+```
+# 執行
+APP Running
+BUTTON Running
+
+# 點擊紫色按鈕
+APP Running
+
+# 點擊紫色按鈕
+APP Running
+```
+
+`useCallback`的 dependency 的用法
+
+我們改寫一下 App.js，加入另一個按鈕「Allow Toggling」，並且建立另一組`useState`變數`[allowToggle, setAllowToggle]`，控制是否啟用 Toggle，以下是程式
+
+```js:App.js
+function App() {
+  const [showParagraph, setShowParagraph] = useState(false);
+  const [allowToggle, setAllowToggle] = useState(false);
+
+  console.log('APP RUNNING');
+
+  const toggleParagraphHandler = useCallback(() => {
+    if (allowToggle) {
+      setShowParagraph((prevShowParagraph) => !prevShowParagraph);
+    }
+  }, []);
+
+  function allowToggleHandler() {
+    setAllowToggle(true);
+  }
+
+  return (
+    <div className="App">
+      <h1>Hello CodeSandbox</h1>
+      <Output show={showParagraph} />
+      <Button onClick={allowToggleHandler}>Allow Toggling</Button>
+      <Button onClick={toggleParagraphHandler}>Toggle Paragraph</Button>
+    </div>
+  );
+}
+```
+
+我們先故意不要寫入任何的`useCallback`的 dependency，執行程式：首先按下「Allow Toggling」，在按下「Toggle Paragraph」，會發現文字沒有出現
+
+這次，我們改寫`useCallback`，加入 dependency，這樣改寫後，程式就正常運作了
+
+```diff js:App.js
+const toggleParagraphHandler = useCallback(() => {
+  if (allowToggle) {
+    setShowParagraph((prevShowParagraph) => !prevShowParagraph);
+  }
+-}, []);
++}, [allowToggle]);
+```
+
+背後的原理是，當我們定義`toggleParagraphHandler`時，實際上我們建立了一個 Closure 環境，意思是說所有在 Closure 裡面定義好的變數等等，都不會干涉到 Global 空間，雖然，我們透過 useCallback 保留函式本身讓他不被每次的執行重新洗掉，但是，裡頭的`allowToggle`變數，卻還是沒辦法繼承（函式不曉得`allowToggle`已經變成`true`了），因此，需要把`allowToggle`寫入 dependency，特意告訴程式，需要一併保存`allowToggle`的值，不要每次刷新掉
+
+再次用`useEffect`優化`allowToggleHandler`
+
+```diff js:App.js
+-function allowToggleHandler() {
+-  setAllowToggle(true);
+-}
++const allowToggleHandler = useCallback(() => {
++  setAllowToggle(true);
++}, []);
+```
+
+這次我們可以看到 Log 變成這樣
+
+```
+# 執行
+APP RUNNING
+BUTTON RUNNING #「Allow Toggling」按鈕
+BUTTON RUNNING # 「Toggle Paragraph」按鈕
+
+# 按下「Allow Toggling」按鈕
+APP RUNNING
+BUTTON RUNNING # 「Toggle Paragraph」按鈕（注意）
+
+# 按下「Toggle Paragraph」按鈕
+APP RUNNING
+
+# 按下「Toggle Paragraph」按鈕
+APP RUNNING
+```
+
+我們可以看到按下「Allow Toggling」之後，BUTTON RUNNING 出現了一次，因為`allowToggle`變成了 true，連帶影響`toggleParagraphHandler`被重新定義到，所以這顆按鈕被重新渲染了
+
+### State
+
+再次回到 App.js，我們可以看到他一開始有定義 state，那麼每次 App 重新執行時，state 不就被重新定義了嗎？其實不會，因為`useState`是 React 的函式，他只會在元件第一次載入時執行定義而已。每次元件重新評估時，React 會記得這個 state 已經被初始分配了，所以不會再次重新定義，只有在需要改變時，會去更新 state 而已
+
+除非這個元件被從 DOM 整個清掉，又再次加回來，才可能發生 state 的重新賦值
+
+```js:App.js
+function App() {
+  const [showParagraph, setShowParagraph] = useState(false);
+  ...
+}
+```
+
+React 的 State 管理流程如下
+
+1. 有一個元件`<MyProduct />`，具有初始 State：`product`為`DVD`（Current State 是`DVD`）
+2. 使用者操作畫面，執行了`setNewProduct('Book')`
+3. `setNewProduct()`安排了一個 State Change，要改為`Book`（Current State 仍是`DVD`）
+4. New State="Book"被定義好了
+5. `<MyProduct />`被重新執行（Re-evaluate）
+
+因為 Scheduled State Change 可能同時有好幾個，所以是很推薦使用箭頭函式的方法處理 state，會安全很多
+
+```js
+setShowParagraph((prevShowParagraph) => !prevShowParagraph);
+```
+
+再來看看另一個範例，這個範例當中，可以看到`navigateHandler`執行了兩個不同的 State，在工作流程中，React 不會分開跑兩次管理流程，他只會跑一次流程，然後一口氣安排兩組 State 變數的 State Change
+
+```js
+function App() {
+  const [drawIsOpen, setDrawIsOpen] = useState(false);
+  const [currentNavPath, setCurrentNavPath] = useState('burger');
+
+  const navigateHandler(navPath) {
+    setCurrentNavPath(navPath);
+    setDrawIsOpen(false);
+  }
+}
+```
+
+### useMemo
+
+`React.memo`的另一種使用情境是節省效能，比如說有一個 List 元件，他裡面用了`sort()`，因為`sort()`如果接收的資料很多的話，會造成效能低落，但是在 React 下又常常會有不必要的 Re-evaluate，這時可以透過`React.memo`的搭配使用，減少不必要的 Re-evaluate，進而提升效能
+
+接著看另一個範例：這個範例畫面上有一個標題、一串清單、一個按鈕，只要點了這個按鈕，標題就會更新成為「New List Title」，但是清單不會發生任何變化。在 DemoList.js 裡面，清單部分的`sort`程式是比較耗能的，我們不希望`sort`重複執行太多次
+
+雖然按鈕按下時只會重新渲染標題部分，但是他卻連清單部分也一起重新執行了，也就是`sort`被不必要地執行了多次
+
+```js:App.js
+const [listTitle, setListTitle] = useState("List Title");
+
+  console.log("APP RUNNING");
+
+  const changeListTitleHandler = useCallback(() => {
+    setListTitle("New List Title");
+  }, []);
+
+  return (
+    <>
+      <DemoList title={listTitle} items={[9, 7, 5, 3, 1]} />
+      <button onClick={changeListTitleHandler}>Set New Title</button>
+    </>
+  );
+```
+
+```js:DemoList.js
+function DemoList(props) {
+  console.log("DEMO LIST RUNNING");
+  const list = props.items.sort((a, b) => a - b).map((item) => <li>{item}</li>);
+
+  return (
+    <>
+      <h2>{props.title}</h2>
+      <ul>{list}</ul>
+    </>
+  );
+}
+```
+
+我們想要再更細緻化地拆分，即便是在同一個元件（DemoList）裡面，也想要做到一部分的程式重新執行（標題），一部分的不要（清單），這時，我們可以使用`useMemo` hook，來完成這件事，`useMemo`可以允許程式記憶化暫存（memoize）我們想保存的資料（有點類似`useCallback`）
+
+將 DemoList.js 改寫成以下
+
+```diff js:DemoList.js
+-const list = props.items.sort((a, b) => a - b).map((item) => <li>{item}</li>);
++const { items } = props;
++const list = useMemo(() => {
++  console.log("SORT RUNNING");
++  return items
++    .sort((a, b) => return a - b;)
++    .map((item) => <li>{item}</li>);
++}, [items]);
+```
+
+dependency 這邊有一個小技巧，因爲 sort 這段是取決於`items`的值有沒有變更，所以 dependency 要傳入`props.items`，但是如果直接這樣寫的話，又會回到每次`props.title`變動時整坨`props`也一起變到的問題，所以先使用`const { items } = props;`把`items`隔離出來，再將`items`作為 dependency 丟進去`useMemo`之中
+
+再次運行程式，但是`sort`還是被重新執行了，原因是因為在 App.js 的 `<DemoList />` 的`items={[9, 7, 5, 3, 1]}`，每次元件重新評估時，雖然我們一樣是丟入`[9, 7, 5, 3, 1]`，但是對 JS 來說兩份陣列卻是不同東西（無法相等），所以也需要在 App.js 使用`useMemo`
+
+將 App.js 改成這樣
+
+```diff js:App.js
+function App() {
+
++ const listItem = useMemo(() => [9, 7, 5, 3, 1], []);
+
+  return (
+    ...
+-    <DemoList items={[9, 7, 5, 3, 1]} />
++    <DemoList items={listItem} />
+  )
+}
+```
+
+這次，在點擊按鈕變更標題時，成功防止了`sort`的再渲染了，實務上來說，使用`useMemo`的時機遠比`useCallback`來得低，因為保存函式的效益比較大
+
+### Class-based Component
+
+Functional Component 的寫法是這樣
+
+```js
+function Product(props) {
+  return <h2>A Product!</h2>;
+}
+```
+
+Class-based Component 的寫法則是這樣，Class-based Component 不能使用 React Hooks
+
+```js
+class Product extends Component {
+  render() {
+    return <h2>A Product!</h2>;
+  }
+}
+```
+
+練習把 Functional Component 改寫為 Class-based Component，這是 Functional Component 版本：
+
+```js:User.js
+import classes from './User.module.css';
+
+const User = (props) => {
+  return <li className={classes.user}>{props.name}</li>;
+};
+
+export default User;
+```
+
+因為 Class-based Component 沒有`props`，所以需要引入`{ Component }`，並且讓`User`Class 繼承`Components`，一旦繼承後，就會有一些預設的屬性，例如`props`，然後再`render`使用`this.props`，這是 Class-based 的 Component
+
+```js:User.js
+import { Component } from 'react'
+import classes from './User.module.css';
+
+class User extends Component {
+  render() {
+    return <li className={classes.user}>{this.props.name}</li>;
+  }
+}
+
+export default User;
+```
+
+### Class-based Component vs State
+
+繼續練習另一個有狀態管理的 Component，原始的 Functional Component 如下
+
+```js:Users.js
+const Users = () => {
+  const [showUsers, setShowUsers] = useState(true);
+
+  const toggleUsersHandler = () => {
+    setShowUsers((curState) => !curState);
+  };
+
+  const usersList = (
+    <ul>
+      {DUMMY_USERS.map((user) => (
+        <User key={user.id} name={user.name} />
+      ))}
+    </ul>
+  );
+
+  return (
+    <div className={classes.users}>
+      <button onClick={toggleUsersHandler}>
+        {showUsers ? 'Hide' : 'Show'} Users
+      </button>
+      {showUsers && usersList}
+    </div>
+  );
+};
+```
+
+在 Class-based Component 中，定義狀態的方式如下，`this.state = {}`一定要這樣寫，理由是：
+
+- class 的 state 永遠是一個 object，但是 function 的 state 可以是任何物
+- 並且，狀態一定是被叫做`state`，不能是其他名稱
+- 一個 class 裡只能夠有一個`state`，不能有多個（在 function 裡頭可以存在多個`state`）
+
+```js
+class Users extends Component {
+  constructor() {
+    this.state = {
+      showUsers: true,
+      moreState: 'Test',
+    };
+  }
+}
+```
+
+並且，在改變狀態的時候，不能直接寫`this.state.showUsers = false`，而是要寫成`this.setState()`，裡面一樣傳入一個物件，但是只需要寫需要更新的部分就好，不需要傳入整份物件，React 會自己幫忙補好
+
+```js
+class Users extends Component {
+  ...
+  toggleUsersHandler() {
+    this.setState({showUsers: false})
+  }
+}
+```
+
+並且，跟 Function Component 的`useState`一樣，`setState`也支援箭頭函式的寫法，但是要寫成這樣
+
+```js
+toggleUserHandler() {
+  this.setState((curState) => {
+    return { showUsers: !curState.showUsers };
+  });
+}
+```
+
+Users.js 改完後如下，因為`toggleUsersHandler`裡面有寫`this`，在 render 裡面為了重新將`this`定義為 Class 本身，所以需要寫成這樣`this.toggleUsersHandler.bind(this)`，不然`this`會變成`undefined`
+
+```js
+class Users extends Component {
+  constructor() {
+    super();
+    this.state = {
+      showUsers: true,
+    };
+  }
+
+  toggleUsersHandler() {
+    // this.state.showUser = false // Not!
+    this.setState((curState) => {
+      return { showUsers: !curState.showUsers };
+    });
+  }
+
+  render() {
+    const usersList = (
+      <ul>
+        {DUMMY_USERS.map((user) => (
+          <User key={user.id} name={user.name} />
+        ))}
+      </ul>
+    );
+
+    return (
+      <div className={classes.users}>
+        <button onClick={this.toggleUsersHandler.bind(this)}>
+          {this.state.showUsers ? 'Hide' : 'Show'} Users
+        </button>
+        {this.state.showUsers && usersList}
+      </div>
+    );
+  }
+}
+
+export default Users;
+```
+
+### Class-based Component vs Effect
+
+Class-based Component 不能使用`useEffect()`，但是，他使用另一種方式處理這個問題，叫做 Lifecycle：
+
+- `componentDidMount()`：元件啟動，並且已經在 DOM 上面之後，等於`useEffect(..., [])`
+- `componentDidUpdate()`：當元件更新之後，等於`useEffect(..., [someValue])`
+- `copmonentWillUnmount()`：當元件移除，並且從 DOM 消失之後，等於 useEffect 的 cleanup：`useEffect(() => { return xxxxx }, [])`
+
+接下來練習把`useEffect`改成 Lifecircle，這是 Funcional Component 版本
+
+```js
+const UserFinder = () => {
+  const [filteredUsers, setFilteredUsers] = useState(DUMMY_USERS);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    setFilteredUsers(
+      DUMMY_USERS.filter((user) => user.name.includes(searchTerm)),
+    );
+  }, [searchTerm]);
+
+  const searchChangeHandler = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  return (
+    <>
+      <div className={classes.finder}>
+        <input type="search" onChange={searchChangeHandler} />
+      </div>
+      <Users users={filteredUsers} />
+    </>
+  );
+};
+```
+
+中間那段`useEffect`可以改成這樣
+
+```js
+componentDidUpdate(prevProps, prevState) {
+  if (prevState.searchTerm != this.state.searchTerm) {
+    this.setState({
+      filteredUsers: DUMMY_USERS.filter((user) =>
+        user.name.includes(this.state.searchTerm)
+      )
+    });
+  }
+}
+```
+
+完整版本如下
+
+```js
+class UserFinder extends Component {
+  constructor() {
+    super();
+    this.state = {
+      filteredUsers: DUMMY_USERS,
+      searchTerm: '',
+    };
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.searchTerm !== this.state.searchTerm) {
+      this.setState({
+        filteredUsers: DUMMY_USERS.filter((user) =>
+          user.name.includes(this.state.searchTerm),
+        ),
+      });
+    }
+  }
+
+  searchChangeHandler(event) {
+    this.state({ searchTerm: event.target.value });
+  }
+
+  render() {
+    return (
+      <>
+        <div className={classes.finder}>
+          <input type="search" onChange={this.searchChangeHandler.bind(this)} />
+        </div>
+        <Users users={this.state.filteredUsers} />
+      </>
+    );
+  }
+}
+```
+
+假如是實際 App，在`DUMMY_USERS`那邊會變成要從網路抓資料下來，我們可以改成這樣
+
+```js
+UserFinder extends Component {
+  constructor() {
+    super();
+    this.state = {
+      filteredUsers: []; // 首先一開始先定義空字串
+    }
+  }
+
+  // 在元件啟動後，開始跟網路溝通
+  componentDidMount() {
+    // 處理 HTTP Request
+    this.setState({ filteredUsers: NEW_USERS })
+  }
+}
+```
+
+### Class-based Component vs Context
+
+首先先佈建 Context 的基礎設施，先在 store 資料夾建立 users-context.js
+
+```js:store/users-context.js
+import React from 'react';
+
+const UsersContext = React.createContext({
+  users: []
+});
+
+export default UsersContext;
+```
+
+然後在 App.js 的最外層使用`<UsersContext.Provider>`
+
+```js:App.js
+const DUMMY_USERS = [
+  { id: "u1", name: "Max" },
+  { id: "u2", name: "Manuel" },
+  { id: "u3", name: "Julie" }
+];
+
+function App() {
+  const usersContext = {
+    users: DUMMY_USERS
+  };
+
+  return (
+    <UsersContext.Provider value={usersContext}>
+      <UserFinder />
+    </UsersContext.Provider>
+  );
+}
+
+export default App;
+```
+
+接者，嘗試在 UserFinder.js 使用 Context，在 Class-based Component 使用 Context 有兩種方式，第一種是 Context Consumer
+
+```diff js:UserFinder.js
+render() {
+  return (
+    <>
++     <UsersContext.Consumer>
+        ...
++     </UsersContext.Consumer>
+    </>
+  );
+}
+```
+
+另一種方式是 contextType，如果是`useContext`，可以建立多個 Context，但是在 Class-based Component 之中，只能夠使用一個，所以如果今天在`user-context.js`之外，還有其他 Context 需要連到同一個元件的話，那就不能使用 contextType
+
+```diff js:UserFinder.js
+class UserFinder extends Component {
++ static contextType = UsersContext
+
+  componentDidMount() {
++   this.setState({ filteredUsers: this.context.users });
+  }
+}
+```
+
+### Error Boundary
+
+如果專案有需要用到 Error Boundary，那可以考慮使用 Class-based 開發元件。`componentDidCatch`可以加在任何 Class-based 的元件中，但是不能加在 Functional 元件裡，這個元件會在元件捕捉到 error 之後執行
+
+```js:ErrorBoundary.js
+class ErrorBoundary extends Component {
+  constructor() {
+    super();
+    this.state = { hasError: false }
+  }
+
+  componentDidCatch(error) {
+    console.log(error)
+    this.setState({hasError: true})
+  }
+
+  render() {
+    if(this.state.hasError === true) {
+      <p>Something went wrong!</p>
+    }
+    return this.props.children;
+
+  }
+}
+
+```
+
+接著開始使用 ErrorBounary，首先先在 Users.js 加入 Error 情境，只要搜尋時一個 user 也沒找到，就會觸發 Error
+
+```js:Users.js
+class Users extends Component {
+  ...
+  componentDidUpdate() {
+    if (this.props.users.length === 0) {
+      throw new Error("No users provided!")
+    }
+  }
+}
+```
+
+然後，在 Users.js 的外層元件 UserFinder.js 加入 ErrorBounary，把`<Users>`給包起來
+
+```js:UserFinder.js
+render() {
+  return (
+    <>
+      ...
+      <ErrorBondary>
+        <Users users={this.state.filteredUsers} />
+      </ErrorBoundary>
+    </>
+  )
+}
+```
+
+如果不使用 Error Boudary 的話，那 react 在接收到 error 之後整個網站都會死掉，但是透過 Error Boundary，我們捕捉 Error 事件，然後顯示 GG 的畫面，而不是讓網站整個死在上面
+
+### Send GET Request
+
+所有瀏覽器端的語言（包括 JS 或是 React）都不應該連到資料庫，因為這會讓連線憑證寫在前端，讓人有機會存取，為了要跟資料庫對接，我們需要另一份後端程式（NodeJS 或是 PHP），當後端程式架好後，React 可以透過後端程式的 API 連接到資料庫，所以 React 不是直接接到資料庫，而是 React → 後端程式 → 資料庫
+
+實作：當按下畫面的「Fetch Movies」，發送 GET API Request
+
+```js:App.js
+function App() {
+  const [movies, setMovies] = useState([]);
+
+  function fetchMovieHandler() {
+    fetch("https://swapi.dev/api/films/")
+      .then((response) => {
+        return response.json();
+      })
+      .then((data) => {
+        const transformedMovies = data.results.map((movieData) => {
+          return {
+            id: movieData.episode_id,
+            title: movieData.title,
+            openingText: movieData.opening_crawl,
+            releaseDate: movieData.release_date
+          };
+        });
+        setMovies(transformedMovies);
+      })
+      .catch();
+  }
+
+  return (
+    <>
+      <section>
+        <button onClick={fetchMovieHandler}>Fetch Movies</button>
+      </section>
+      <section>
+        <MoviesList movies={movies} />
+      </section>
+    </>
+  );
+}
+
+export default App;
+```
+
+```js:MovieList.js
+const MovieList = (props) => {
+  return (
+    <ul className={classes['movies-list']}>
+      {props.movies.map((movie) => (
+        <Movie
+          key={movie.id}
+          title={movie.title}
+          releaseDate={movie.releaseDate}
+          openingText={movie.openingText}
+        />
+      ))}
+    </ul>
+  );
+};
+
+export default MovieList;
+```
+
+```js:Movie.js
+const Movie = (props) => {
+  return (
+    <li className={classes.movie}>
+      <h2>{props.title}</h2>
+      <h3>{props.releaseDate}</h3>
+      <p>{props.openingText}</p>
+    </li>
+  );
+};
+
+export default Movie;
+```
+
+修改 App.js 的 fetchMovieHandler，改用 async/await
+
+```js:App.js
+function App() {
+  ...
+  async function fetchMovieHandler() {
+    const response = await fetch("https://swapi.dev/api/films/");
+    const data = await response.json();
+    const transformedMovies = data.results.map((movieData) => {
+      return {
+        id: movieData.episode_id,
+        title: movieData.title,
+        openingText: movieData.opening_crawl,
+        releaseDate: movieData.release_date
+      };
+    });
+
+    setMovies(transformedMovies);
+  }
+}
+```
+
+現在畫面完成了，但是缺少 loading 機制，導致畫面看起來不太順，修改 App.js 已加入 Loading
+
+```diff js:App.js
+function App() {
+  ...
++ const [isLoading, setIsLoading] = useState(false);
+
+  async function fetchMovieHandler() {
++   setIsLoading(true);
+    const response = await fetch("https://swapi.dev/api/films/");
+    const data = await response.json();
+    const transformedMovies = data.results.map((movieData) => {
+      return {
+        id: movieData.episode_id,
+        title: movieData.title,
+        openingText: movieData.opening_crawl,
+        releaseDate: movieData.release_date
+      };
+    });
+
+    setMovies(transformedMovies);
++   setIsLoading(false);
+  }
+
+  return (
+    ...
+-    <MoviesList movies={movies} />
++    { !isLoading && movies.length > 0 && <MoviesList movies={movies} /> }
++    { !isLoading && movies.length === 0 && <p>Found no movies.</p> }
++    {  isLoading && <p>Loading...</p> }
+  )
+}
+```
+
+現在，我們的網頁變得很不錯，但是假如 API 發送有了錯誤，網頁不會顯示任何特別的，所以修改 App.js，加入錯誤處理，由於我們使用原生 JS 的 fetch，當錯誤發生時，錯誤不會變成真正的 Error 格式，我們要自己做 Error 格式，如果利用 axios 的話，他會幫忙處理錯誤格式
+
+```diff js:App.js
+function App() {
+  ...
++ const [error, setError] = useState(null);
+
+  async function fetchMovieHandler() {
++   setIsLoading(true);
+    setError(null);
+
++   try {
+      const response = await fetch("https://swapi.dev/api/films/");
+
++     if (!response.ok) {
++       throw new Error("Something went wrong!");
++     }
+
+      const data = await response.json();
+      const transformedMovies = data.results.map((movieData) => {
+        return {
+          id: movieData.episode_id,
+          title: movieData.title,
+          openingText: movieData.opening_crawl,
+          releaseDate: movieData.release_date
+        };
+      });
+
+      setMovies(transformedMovies);
+-     setIsLoading(false);
++   } catch(error) {
++      setError(error.message)
++      setIsLoading(false);
++   }
+
++   setIsLoading(false);
+  }
+
+  return (
+    ...
+    {!isLoading && movies.length > 0 && <MoviesList movies={movies} />}
+-   {!isLoading && movies.length === 0 && <p>Found no movies.</p>}
++   {!isLoading && movies.length === 0 && !error && <p>Found no movies.</p>}
++   {!isLoading && error && <p>{error}</p>}
+    { isLoading && <p>Loading...</p> }
+  )
+}
+```
+
+因為 JSX 裡面包含太多邏輯，我們可以把它獨立出來
+
+```diff js:App.js
+function App() {
+  ...
++  let content = <p>Found no movies</p>;
++
++  if (movies.length > 0) {
++    content = <MoviesList movies={movies} />;
++  }
++
++  if (error) {
++    content = <p>error</p>;
++  }
++
++  if (isLoading) {
++    content = <p>Loading...</p>;
++  }
+
+  return (
+    ...
+-    {!isLoading && movies.length > 0 && <MoviesList movies={movies} />}
+-    {!isLoading && movies.length === 0 && !error && <p>Found no movies.</p>}
+-    {isLoading && <p>Loading...</p>}
+-    {!isLoading && error && <p>{error}</p>}
++    {content}
+  )
+}
+```
+
+現在要再加一個功能，我們希望當這頁一進來時，就載入數據，所以搭配使用`useEffect`：
+
+```js:App.js
+function App() {
+  ...
+  useEffect(() => {
+    fetchMovieHandler();
+  }, []);
+}
+```
+
+並且，也希望將`fetchMovieHandler`加入 useEffect 的 dependency 之中，當`fetchMovieHandler`函式發生變化時，可以反映並且執行`useEffect`（雖然目前的範例並沒有讓`fetchMovieHandler`是有變化的）
+
+```diff js:App.js
+useEffect(() => {
+  fetchMovieHandler();
+-}, []);
++}, [fetchMovieHandler]);
+```
+
+但是，由於每次 App re-render 時，函式`fetchMovieHandler`會發生變化，產生更新，所以實際上會發生無限迴圈：
+
+- `fetchMovieHandler`更新 →
+- 執行`useEffect`→
+- 觸發狀態管理、更新狀態、重新渲染畫面 →
+- 因為畫面重渲染了，所以`fetchMovieHandler`被更新 →
+- 執行`useEffect`→...
+
+因次，我們需要再搭配`useCallback`，保存`fetchMovieHandler`
+
+```diff js:App.js
+function App() {
+-  async function fetchMovieHandler() {
++  const fetchMovieHandler = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("https://swapi.dev/api/films/");
+
+      if (!response.ok) {
+        throw new Error("Something went wrong!");
+      }
+
+      const data = await response.json();
+      const transformedMovies = data.results.map((movieData) => {
+        return {
+          id: movieData.episode_id,
+          title: movieData.title,
+          openingText: movieData.opening_crawl,
+          releaseDate: movieData.release_date
+        };
+      });
+
+      setMovies(transformedMovies);
+    } catch (error) {
+      setError(error.message);
+    }
+
+    setIsLoading(false);
+- }
++ }, [])
+
+  useEffect(() => {
+    fetchMovieHandler();
+  }, [fetchMovieHandler]);
+}
+```
+
+`useCallback`不需要加入任何 dependency，因為我們使用原生 fetch，跟原生狀態管理，這兩個都不會在 React 執行過程中發生變化
+
+### POST Request
+
+因為 swapi 這個 api 只能用來打 GET，所以我們需要用 firebase 自己建一個可以收 POST 的 api
+
+```diff js:App.js
+const fetchMovieHandler = useCallback(async () => {
+  ...
+  try {
+-   const response = await fetch("https://swapi.dev/api/films/");
++   const response = await fetch("https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/movies.json");
+
+    if (!response.ok) {
+      throw new Error("Something went wrong!");
+    }
+
+    const data = await response.json();
+
++   const loadedMovies = [];
+
++   for (const key in data) {
++     loadedMovies.push({
++       id: key,
++       title: data[key].title,
++       openingText: data[key].openingText,
++       releaseDate: data[key].releaseDate
++     });
++   }
+
+-   const transformedMovies = data.results.map((movieData) => {
+-     return {
+-       id: movieData.episode_id,
+-       title: movieData.title,
+-       openingText: movieData.opening_crawl,
+-       releaseDate: movieData.release_date
+-     };
+-   });
+
+-    setMovies(transformedMovies);
++   setMovies(loadedMovies);
+
+  }
+}
+
+-function addMovieHandler(movie) {
+- console.log(movie)
+-}
+
++async function addMovieHandler(movie) {
++  const response = await fetch(
++    "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/movies.json",
++    {
++      method: "POST",
++      body: JSON.stringify(movie),
++      headers: {
++        "Content-Type": "application/json"
++      }
++    }
++  );
++
++  const data = await response.json();
++  console.log(data);
++}
+```

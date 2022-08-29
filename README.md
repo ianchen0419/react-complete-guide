@@ -2935,3 +2935,688 @@ const fetchMovieHandler = useCallback(async () => {
 +  console.log(data);
 +}
 ```
+
+### Custom hooks
+
+Custom hooks 可以使用 React function（例如`useState`、`useEffect`那些）
+
+首先先看一個範例：這是一個計時器，他有重複的 code 散落在不同元件中
+
+```js:App.js
+function App() {
+  return (
+    <>
+      <ForwardCounter />
+      <BackwardCounter />
+    </>
+  );
+}
+
+export default App;
+```
+
+```js:BackwardCounter.js
+function BackwardCounter() {
+  const [counter, setCounter] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCounter((prevCounter) => prevCounter - 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return <Card>{counter}</Card>;
+}
+
+export default BackwardCounter;
+```
+
+```js:ForwardCounter.js
+function ForwardCounter() {
+  const [counter, setCounter] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCounter((prevCounter) => prevCounter + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return <Card>{counter}</Card>;
+}
+
+export default ForwardCounter;
+```
+
+我們可以看到在 BackwardCounter.js 跟 ForwardCounter.js 裡面，下面這段程式幾乎是重複的，只是一個是加，一個是減
+
+```js
+const [counter, setCounter] = useState(0);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    setCounter((prevCounter) => prevCounter + 1);
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, []);
+```
+
+首先先在 src 資料夾底下建立一個新資料夾 hooks，並且在這裡面在建立一個檔案：use-counter.js，名稱一定要叫做`use-xxx`，因為只要是 React 之中用來存函式的檔案，都必須要這種名字
+
+將重複的程式貼進去（並且記得要引入有使用到的 React hooks），並且，因為使用 useCounter 時 JSX 需要知道`counter`這個變數，所以在最後一行`return counter`
+
+```js:src/hooks/use-counter.js
+import { useState, useEffect } from "react";
+
+function useCounter() {
+  const [counter, setCounter] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCounter((prevCounter) => prevCounter + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return counter;
+}
+
+export default useCounter;
+```
+
+然後替換掉原本的 ForwardCounter.js
+
+```diff js:ForwardCounter.js
++import useCounter from '../hooks/use-couter';
+
+function ForwardCounter() {
+-  const [counter, setCounter] = useState(0);
+-
+-  useEffect(() => {
+-    const interval = setInterval(() => {
+-      setCounter((prevCounter) => prevCounter + 1);
+-    }, 1000);
+-
+-    return () => clearInterval(interval);
+-  }, []);
+
++  counst counter = useCounter();
+
+  return <Card>{counter}</Card>;
+}
+```
+
+接著，修改 use-counter.js，新增參數，讓他可以適用在加的情境，也能適用在減的情境，這是其中一種改法：
+
+```diff js:src/hooks/use-counter.js
+-function useCounter() {
++function useCounter(counterUpdateFn) {
+  const [counter, setCounter] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+-      setCounter((prevCounter) => prevCounter + 1);
++      setCounter(counterUpdateFn());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return counter;
+}
+```
+
+但我們也可以改成這樣，簡化使用情境
+
+```diff js:src/hooks/use-counter.js
+-function useCounter() {
++function useCounter(forwards = true) {
+  const [counter, setCounter] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+-      setCounter((prevCounter) => prevCounter + 1);
++       if (forwards) {
++         setCounter((prevCounter) => prevCounter + 1);
++       } else {
++         setCounter((prevCounter) => prevCounter - 1);
++       }
+
+    }, 1000);
+
+    return () => clearInterval(interval);
+-  }, []);
++  }, [forwards]);
+
+  return counter;
+}
+```
+
+因為有填入預設值，所以 ForwardCounter.js 保持不動，並且修改 BackwardCounter.js
+
+```diff js:BackwardCounter.js
+function BackwardCounter() {
+-  const [counter, setCounter] = useState(0);
+-
+-  useEffect(() => {
+-    const interval = setInterval(() => {
+-      setCounter((prevCounter) => prevCounter - 1);
+-    }, 1000);
+-
+-    return () => clearInterval(interval);
+-  }, []);
+
++  const counter = useCounter(false);
+}
+```
+
+這就是 Custom hooks 的基礎用法，我們再來看一個更進階的案例：將 HTTP Request 的 GET 與 POST 寫成一個 hook
+
+```js:App.js
+function App() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [tasks, setTasks] = useState([]);
+
+  const fetchTasks = async (taskText) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json"
+      );
+
+      if (!response.ok) {
+        throw new Error("Request failed!");
+      }
+
+      const data = await response.json();
+
+      const loadedTasks = [];
+
+      for (const taskKey in data) {
+        loadedTasks.push({ id: taskKey, text: data[taskKey].text });
+      }
+
+      setTasks(loadedTasks);
+    } catch (err) {
+      setError(err.message || "Something went wrong!");
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const taskAddHandler = (task) => {
+    setTasks((prevTasks) => prevTasks.concat(task));
+  };
+
+  return (
+    <>
+      <NewTask onAddTask={taskAddHandler} />
+      <Tasks
+        items={tasks}
+        loading={isLoading}
+        error={error}
+        onFetch={fetchTasks}
+      />
+    </>
+  );
+}
+```
+
+```js:NewTask.js
+const NewTask = (props) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const enterTaskHandler = async (taskText) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json",
+        {
+          method: "POST",
+          body: JSON.stringify({ text: taskText }),
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Request failed!");
+      }
+
+      const data = await response.json();
+
+      const generatedId = data.name; // firebase-specific => "name" contains generated id
+      const createdTask = { id: generatedId, text: taskText };
+
+      props.onAddTask(createdTask);
+    } catch (err) {
+      setError(err.message || "Something went wrong!");
+    }
+    setIsLoading(false);
+  };
+
+  return (
+    <Section>
+      <TaskForm onEnterTask={enterTaskHandler} loading={isLoading} />
+      {error && <p>{error}</p>}
+    </Section>
+  );
+};
+```
+
+因為我們打算合併的 HTTP Request 部分，裡面還有 set state 的邏輯在，所以不能用一般的 JS 寫，必須使用 Custom hook 處理
+
+首先，建立檔案：`src/hooks/use-http.js`，然後把 App.js 的`fetchTasks`跟上面 2 個 state 都貼進去，然後將`fetchTash`改名為`sendRequest`，然後替換程式部分
+
+```js:src/hooks/use-http.js
+function useHttp() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const sendRequest = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json"
+      );
+
+      if (!response.ok) {
+        throw new Error("Request failed!");
+      }
+
+      const data = await response.json();
+
+      const loadedTasks = [];
+
+      for (const taskKey in data) {
+        loadedTasks.push({ id: taskKey, text: data[taskKey].text });
+      }
+
+      setTasks(loadedTasks);
+    } catch (err) {
+      setError(err.message || "Something went wrong!");
+    }
+    setIsLoading(false);
+  };
+
+}
+
+export default useHttp;
+```
+
+新增參數`requestConfig`，並且將`fetch`裡面的程式用參數代掉
+
+```diff js:src/hooks/use-http.js
+-function useHttp() {
++function useHttp(requestConfig) {
+  ...
+ const sendRequest = async () => {
+    ...
+    try {
+-      const response = await fetch("https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json");
++      const response = await fetch(requestConfig.url, {
++        method: requestConfig.method,
++        headers: requestConfig.headers,
++        body: JSON.stringify(requestConfig.body)
++      });
+
+    }
+  }
+}
+```
+
+然後，因為收回來的資料，需要再提供給其他元件利用，所以再新增一個函式參數`applyData`，把原本從 App.js 抄過來的邏輯刪掉，呼叫 applyData 並且把 data 傳遞進去
+
+```diff js:src/hooks/use-http.js
+-function useHttp(requestConfig) {
++function useHttp(requestConfig, applyData) {
+  ...
+ const sendRequest = async () => {
+  ...
+  try {
+    ...
+    const data = await response.json();
+
+-   const loadedTasks = [];
+-   for (const taskKey in data) {
+-     loadedTasks.push({ id: taskKey, text: data[taskKey].text });
+-   }
+-   setTasks(loadedTasks);
++   applyData(data)
+  }
+
+  }
+}
+```
+
+最後，處理回傳值，在 useHttp 的最後面加上 return
+
+```js:src/hooks/use-http.js
+function useHttp(requestConfig, applyData) {
+  ...
+  return {
+    isLoading: isLoading,
+    error: error,
+    sendRequest: sendRequest,
+  }
+}
+```
+
+return 也可以剪寫成這樣（ES6）
+
+```js
+return {
+  isLoading,
+  error,
+  sendRequest,
+};
+```
+
+接下來，在 App.js 使用 useHttp
+
+```diff js:App.js
+function App() {
+  const [isLoading, setIsLoading] = useState(false);
+- const [error, setError] = useState(null);
+- const [tasks, setTasks] = useState([]);
+
++ function transformTasks(taskObj) {
++   const loadedTasks = [];
++
++   for (const taskKey in taskObj) {
++     loadedTasks.push({ id: taskKey, text: taskObj[taskKey].text });
++   }
++
++   setTasks(loadedTasks);
++ }
+
+  // sendRequest: fetchTasks，設定sendRequest的alias名稱
++ const { isLoading, error, sendRequest: fetchTasks } = useHttp(
++   {
++     url:
++       "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json"
++   },
++   transformTasks
++ );
+
+- const fetchTasks = async (taskText) => {
+-   setIsLoading(true);
+-   setError(null);
+-   try {
+-     const response = await fetch(
+-       "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json"
+-     );
+-
+-     if (!response.ok) {
+-       throw new Error("Request failed!");
+-     }
+-
+-     const data = await response.json();
+-
+-      const loadedTasks = [];
+-
+-      for (const taskKey in data) {
+-        loadedTasks.push({ id: taskKey, text: data[taskKey].text });
+-      }
+-
+-      setTasks(loadedTasks);
+-   } catch (err) {
+-     setError(err.message || "Something went wrong!");
+-   }
+-   setIsLoading(false);
+- };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []); // dependency裡面先不放 `[fetchTasks]`，避免造成無限迴圈
+
+  const taskAddHandler = (task) => {
+    setTasks((prevTasks) => prevTasks.concat(task));
+  };
+
+  return (
+    <>
+      <NewTask onAddTask={taskAddHandler} />
+      <Tasks
+        items={tasks}
+        loading={isLoading}
+        error={error}
+        onFetch={fetchTasks}
+      />
+    </>
+  );
+}
+```
+
+修改 use-http.js，設定 requestConfig 的預設情境
+
+```diff js:use-http.js
+const response = await fetch(requestConfig.url, {
+- method: requestConfig.method,
++ method: requestConfig.method ? requestConfig.method : 'GET',
+- headers: requestConfig.headers,
++ headers: requestConfig.headers ? requestConfig.headers : {},
+- body: JSON.stringify(requestConfig.body)
++ body: requestConfig.body ? JSON.stringify(requestConfig.body) : null
+});
+```
+
+接下來處理 useEffect 的 dependency，雖然這樣寫很好，但是會造成無限迴圈，因為在 useEffect 的裡面呼叫了`fetchTasks()`，他會執行 use-http.js 裡面寫好的程式，當中我們有定義一些 state，當 state 被設定後，這個 App.js 元件會開始使用 custom hook，然後被 re-render...
+
+```js:App.js
+useEffect(() => {
+  fetchTasks();
+}, [fetchTasks]);
+```
+
+因此，要修改 use-http.js，把 sendRequest 用 useCallback 包起來，dependency 丟入`requestConfig`與`applyData`，但是因為這兩者也是物件與函式，我們要確保這兩個的相等性，所以也要修改 App.js
+
+```diff js:src/hooks/use-http.js
+-const sendRequest = async () => {
++const sendRequest = async () => {
+
+-}
++}, [requestConfig, applyData])
+```
+
+首先處理 applyData 相關的
+
+```diff js:App.js
+-function transformTasks(taskObj) {
++const transformTasks = useCallback((taskObj) => {
+
+-}
++}, []) //dependency不用加任何東西，因為外部沒有任何東西會改到，所有的改動都發生在內部
+```
+
+接下來處理 requestConfig，這邊其實只要把參數宣告的地方改到內部去就可以了（並且移除 dependency）
+
+```diff js:src/hooks/use-http.js
+-function useHttp(requestConfig, applyData) {
++function useHttp(applyData) {
+  ...
+- const sendRequest = useCallback(async () => {
++ const sendRequest = useCallback(async (requestConfig) => {
+
+- }, [requestConfig, applyData]);
++ }, [applyData]);
+}
+```
+
+然後修改 App.js
+
+```diff js:App.js
+-const { isLoading, error, sendRequest: fetchTasks } = useHttp(
+-  {
+-    url:
+-      "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json"
+-  },
+-  transformTasks
+-);
+
++const { isLoading, error, sendRequest: fetchTasks } = useHttp(transformTasks);
+
+useEffect(() => {
+- fetchTasks();
++ fetchTasks({
+    url: "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json"
+  });
+-}, []);
++}, [fetchTasks]);
+```
+
+當然，我們也可以將 applyData 用 requestConfig 的方式，封裝在 sendRequest 裡面，這樣其實也就不用再為 applyData 寫一個 useCallback
+
+```diff js:App.js
+-const transformTasks = useCallback((taskObj) => {
++const transformTasks = (taskObj) => {
+
+-}, []);
++}
+
+-const { isLoading, error, sendRequest: fetchTasks } = useHttp(transformTasks);
++const { isLoading, error, sendRequest: fetchTasks } = useHttp();
+
+// 把transformTasks移進去useEffect裡面
+useEffect(() => {
++  const transformTasks = (taskObj) => {
++    const loadedTasks = [];
++
++    for (const taskKey in taskObj) {
++      loadedTasks.push({ id: taskKey, text: taskObj[taskKey].text });
++    }
++
++    setTasks(loadedTasks);
++  };
+
+  fetchTasks({
+    url:
+      "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json"
+-  });
++  }, transformTasks);
+}, [fetchTasks]);
+```
+
+接著修改 use-http.js
+
+```diff js:src/hooks/use-http.js
+-function useHttp(applyData) {
++function useHttp() {
+
+-  const sendRequest = useCallback(async (requestConfig) => {
++  const sendRequest = useCallback(async (requestConfig, applyData) => {
+
+-  }, [applyData])
++  }, [])
+}
+```
+
+最後修改 NewTask.js，讓這隻檔案也使用 useHttp，這次不會有無限迴圈的問題，因為這隻是在每次 input 送出後才會執行 useHttp，上面那隻 App.js 的 useHttp 是在 useEffect 裡面，所以 App.js 會需要再包 useCallback 處理
+
+```diff js:NewTask.js
+const NewTask = (props) => {
+-  const [isLoading, setIsLoading] = useState(false);
+-  const [error, setError] = useState(null);
++  const { isLoading, error, sendRequest: sendTaskRequest } = useHttp();
+
++  function createTask(taskData) {
++    const generatedId = taskData.name; // firebase-specific => "name" contains generated id
++    const createdTask = { id: generatedId, text: taskText };
++
++    props.onAddTask(createdTask);
++  }
+
+  const enterTaskHandler = async (taskText) => {
++    sendTaskRequest({
++      url:
++        "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json",
++      method: "POST",
++      headers: {
++        "Content-Type": "application/json"
++      },
++      body: { text: taskText }
++    }, createTask);
+
+-    setIsLoading(true);
+-    setError(null);
+-    try {
+-      const response = await fetch(
+-        "https://react-http-d7585-default-rtdb.asia-southeast1.firebasedatabase.app/tasks.json",
+-        {
+-          method: "POST",
+-          body: JSON.stringify({ text: taskText }),
+-          headers: {
+-            "Content-Type": "application/json"
+-          }
+-        }
+-      );
+-
+-     if (!response.ok) {
+-        throw new Error("Request failed!");
+-      }
+-
+-      const data = await response.json();
+-
+-      const generatedId = data.name; // firebase-specific => "name" contains generated id
+-      const createdTask = { id: generatedId, text: taskText };
+-
+-      props.onAddTask(createdTask);
+-    } catch (err) {
+-      setError(err.message || "Something went wrong!");
+-    }
+-    setIsLoading(false);
+  };
+
+  return (
+    <Section>
+      <TaskForm onEnterTask={enterTaskHandler} loading={isLoading} />
+      {error && <p>{error}</p>}
+    </Section>
+  );
+};
+```
+
+我們的程式有一個問題：createTask 裡面的 taskText 沒有被宣告，所以會出錯，有兩個解法：其中一個是把 createTask 移動到 enterTaskHandler 裡面去
+
+```diff js:NewTask.js
+const enterTaskHandler = async (taskText) => {
++  function createTask(taskData) {
++    const generatedId = taskData.name; // firebase-specific => "name" contains generated id
++    const createdTask = { id: generatedId, text: taskText };
++
++    props.onAddTask(createdTask);
++  }
+  ...
+}
+```
+
+另一個作法是增加 createTask 的參數
+
+```diff js:NewTask.js
+-function createTask(taskData) {
++function createTask(taskText, taskData) {
+
+}
+
+const enterTaskHandler = async (taskText) => {
+  sendTaskRequest(
+    { ... }, // 第一個參數
+-   createTask
++   createTask.bind(null, taskText)
+  )
+}
+```

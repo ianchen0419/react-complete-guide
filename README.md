@@ -3620,3 +3620,523 @@ const enterTaskHandler = async (taskText) => {
   )
 }
 ```
+
+### Input 與 Form
+
+首先先做 submit 的處理，有兩種取得 input 的 value 的做法：state 與 ref，這個範例中把兩種做法都寫下來，這兩種做法分別適合的情境是：
+
+- 當我們的表單只需要檢核一次（送出後驗證），適合使用 ref 的做法，但如果我們的表單需要做多次檢核（一邊輸入一邊驗證輸入是否正確）那適合用 state 的做法
+- 當表單需要 reset 時，只能用 state 的做法，因為 ref 的 reset 做法不好，因為在使用 React 時應該要盡量避免操作 DOM
+
+```diff js:SimpleInput.js
+function SimpleInput(props) {
++ const nameInputRef = useRef();
++ const [enteredName, setEnteredName] = useState("")
+
++ function nameInputChangeHandler(event) {
++   setEnteredName(event.target.value);
++ }
+
++ function fromSubmissionHandler(event) {
++   event.preventDefault();
++
++   console.log(enteredName);
++
++   const enteredValue = nameInputRef.current.value;
++   console.log(enteredValue);
++
++   // nameInputRef.current.value = '' // 不推薦這樣用
++   setEnteredName(""); //state可以reset
++ }
+
+  return (
+-   <form>
++    <form onSubmit={fromSubmissionHandler}>
+      <div className="form-control">
+        <label htmlFor="name">Your Name</label>
+-       <input type="text" id="name" />
++       <input ref={nameInputRef} value={enteredName} type="text" id="name" onChange={nameInputChangeHandler} />
+      </div>
+      <div className="form-actions">
+        <button>Submit</button>
+      </div>
+    </form>
+  );
+};
+```
+
+接下來，我們加入檢核機制，當使用者輸入空字串，讓他顯示錯誤訊息，並且擴增錯誤訊息的樣式，讓錯誤狀態時，輸入框也是紅色的
+
+```diff js:SimpleInput.js
+function SimpleInput(props) {
++ const [etneredNameIsValid, setEnteredNameIsValid] = useState(true);
+  ...
+
+  function fromSubmissionHandler(event) {
+    ...
+
++   if (enteredName.trim() === "") {
++     setEnteredNameIsValid(false)
++     return;
++   }
++   setEnteredNameIsValid(true)
+
+    ...
+
+  }
+
++ const nameInputClasses = enteredNameIsValid ? 'form-control' : 'form-control invalid'
+
+  return (
+    ...
+-   <div className="form-control">
++    <div className={nameInputClasses}>
+      ...
++     {!enteredNameIsValid && <p className="error-text">Name must not be empty.</p>}
+  )
+}
+```
+
+再接著深入地看，在上面的範例中，為求方便，一開始就將`etneredNameIsValid`設定為 true 了，但是實際上一開始時輸入框都是空的，應該要是 false 才對，因此在新增一個狀態：touch，控制更細緻的 UX
+
+```diff js:SimpleInput.js
+function SimpleInput(props) {
+- const [etneredNameIsValid, setEnteredNameIsValid] = useState(true);
++ const [etneredNameIsValid, setEnteredNameIsValid] = useState(false);
++ const [enteredNameTouched, setEnteredNameTouched] = useState(false);
+  ...
+
+  function fromSubmissionHandler(event) {
++   setEnteredNameTouched(true) // 當發送表單時，設定輸入框touched為true
+  }
+
++ const nameInputIsInvalid = !enteredNameIsValid && enteredNameTouched
+
+- const nameInputClasses = enteredNameIsValid ? 'form-control' : 'form-control invalid'
++ const nameInputClasses = nameInputIsInvalid ? 'form-control invalid' : 'form-control'
+
+  return (
+    ...
+-   {!enteredNameIsValid && <p className="error-text">Name must not be empty.</p>}
++   {nameInputIsInvalid && <p className="error-text">Name must not be empty.</p>}
+  )
+}
+```
+
+在更進一步：我們希望當輸入框 blur 時也能檢核
+
+```diff js:SimpleInput.js
+function SimpleInput(props) {
+  ...
+
++ function nameInputBlurHandler(event) {
++   setEnteredNameTouched(true);
++
++   if (enteredName.trim() === "") {
++     setEnteredNameIsValid(false);
++   }
++ }
+
+  return (
+    ...
+-   <input ref={nameInputRef} value={enteredName} type="text" id="name" onChange={nameInputChangeHandler} />
++   <input ref={nameInputRef} value={enteredName} type="text" id="name" onBlur={nameInputBlurHandler} onChange={nameInputChangeHandler} />
+  )
+}
+```
+
+接著再繼續寫可以檢查每次文字輸入的檢核
+
+```diff js:SimpleInput.js
+function nameInputChangeHandler(event) {
+  setEnteredName(event.target.value);
+
++ if (enteredName.trim() !== "") {
++   setEnteredNameIsValid(true);
++ }
+}
+```
+
+接下來我們可以清理一下程式，因為現在程式太長了，首先先把不會用到的 ref 刪掉
+
+```diff js:SimpleInput.js
+function SimpleInput() {
+- const nameInputRef = useRef();
+
+  function fromSubmissionHandler(event) {
+    ...
+-   const enteredValue = nameInputRef.current.value;
+-   console.log(enteredValue);
+  }
+
+  return (
+    <input
+-     ref={nameInputRef}
+      type="text"
+      id="name"
+      value={enteredName}
+      onBlur={nameInputBlurHandler}
+      onChange={nameInputChangeHandler}
+    />
+  )
+
+}
+```
+
+另一個可以優化的地方是顯示錯誤的邏輯，我們顯示錯誤的邏輯是 ① 檢查輸入資料是否不合格，以及 ② 檢查輸入匡是否被 touched，因此可以把`enteredNameIsValid`這段 state 刪掉，改成用一段函式取代他
+
+```diff js:SimpleInput.js
+function SimpleInput() {
+  const [enteredName, setEnteredName] = useState("");
+- const [enteredNameIsValid, setEnteredNameIsValid] = useState(true);
+  const [enteredNameTouched, setEnteredNameTouched] = useState(false);
+
++ // 因為每當state改變時，元件都會re-evaluate，這時裡面的JS內容都會重新運行，所以我們永遠都可以抓到最新的enteredName跟enteredNameTouched
++ const enteredNameIsValid = enteredName.trim() !== "";
++ const nameInputIsInvalid = !enteredNameIsValid && enteredNameTouched;
+
+
+
+  function nameInputChangeHandler(event) {
+    setEnteredName(event.target.value);
+
+-   if (enteredName.trim() !== "") {
+-     setEnteredNameIsValid(true);
+-   }
+  }
+
+  function nameInputBlurHandler(event) {
+    setEnteredNameTouched(true);
+  }
+
+  function fromSubmissionHandler(event) {
+    event.preventDefault();
+
+    setEnteredNameTouched(true);
+
+-   if (enteredName.trim() === "") {
++   if (!enteredNameIsValid) {
+-     setEnteredNameIsValid(false);
+      return;
+    }
+
+-   setEnteredNameIsValid(true);
+
+    console.log(enteredName);
+
+    setEnteredName("");
++   setEnteredNameTouched(false); // 送出之後由於輸入框空了，所以會出現錯誤訊息
+  }
+
+-  const nameInputIsInvalid = !enteredNameIsValid && enteredNameTouched; // 移動位置到最上面
+
+  const nameInputClasses = nameInputIsInvalid
+    ? "form-control invalid"
+    : "form-control";
+}
+```
+
+這樣我們的單一輸入框檢核就完成了，但是實際上通常一個表單內會有許多個輸入框，只要其中一個輸入框 invalid，整個表單也會 invalid
+
+```diff js:SimpleInput.js
+function SimpleInput() {
+  ...
++ const [formIsValid, setFormIsValid] = useState(false);
+
+  ...
+
++ useEffect(() => {
++   if(enteredNameIsValid) {
++     setFormIsValid(true)
++   } else {
++     setFormIsValid(false)
++   }
++ }, [enteredNameIsValid])
+
+  return (
+    ...
+-   <button>Submit</button>
++   <button disabled={!formIsValid}>Submit</button>
+  )
+}
+```
+
+其實因為`enteredNameIsValid`根本不是 state，所以也不需要使用 useEffect
+
+```diff js
+-useEffect(() => {
+  if (enteredNameIsValid) {
+    setFormIsValid(true);
+  } else {
+    setFormIsValid(false);
+  }
+-}, [enteredNameIsValid]);
+```
+
+並且，formIsValid 因為也只是根據其他變數的判斷而已，所以也不需要使用 state
+
+```diff js
+-const [formIsValid, setFormIsValid] = useState(false);
++let formIsValid = false;
+
+if (enteredNameIsValid) {
+-  setFormIsValid(true);
++  formIsValid = true;
+} else {
+-  setFormIsValid(false);
++  formIsValid = false;
+}
+```
+
+接下來我們將輸入框的檢核邏輯給外部化，做成 Custom hook，因為如果當每多一個輸入框，就要複製那一大堆檢核邏輯，會很沒效率
+
+首先，新增 `src/hooks/use-input.js`，並且將原本的檢核邏輯貼過來
+
+```js:use-input.js
+function useInput() {
+  const [enteredName, setEnteredName] = useState("");
+  const [enteredNameTouched, setEnteredNameTouched] = useState(false);
+
+  const enteredNameIsValid = enteredName.trim() !== "";
+  const nameInputIsInvalid = !enteredNameIsValid && enteredNameTouched;
+}
+```
+
+修改變數名稱
+
+```diff js:use-input.js
+function useInput() {
+-  const [enteredName, setEnteredName] = useState("");
++  const [enteredValue, setEnteredValue] = useState("");
+-  const [enteredNameTouched, setEnteredNameTouched] = useState(false);
++  const [isTouched, setIsTouched] = useState(false);
+
+-  const enteredNameIsValid = enteredName.trim() !== "";
++  const valueIsValid = enteredValue .trim() !== "";
+-  const nameInputIsInvalid = !enteredNameIsValid && enteredNameTouched;
++  const hasError = !valueIsValid && isTouched;
+}
+```
+
+然後加入一個變數，儲存檢核邏輯
+
+```diff js:use-input.js
+-function useInput() {
++function useInput(validate) {
+  const [enteredValue, setEnteredValue] = useState("");
+  const [isTouched, setIsTouched] = useState(false);
+
+-  const enteredNameIsValid = enteredValue.trim() !== "";
++  const enteredNameIsValid = validate(enteredValue);
+  const hasError = !enteredNameIsValid && isTouched;
+}
+```
+
+指定回傳值有 value 跟 hasError
+
+```js:use-input.js
+function useInput(validate) {
+  ...
+  return {
+    value: enteredValue, error, isValid: valueIsValid,
+  }
+}
+```
+
+接下來複製 change 與 blur 函式過來
+
+```js:use-input.js
+function useInput(validate) {
+  ...
+  function nameInputChangeHandler(event) {
+    setEnteredName(event.target.value);
+  }
+
+  function nameInputBlurHandler(event) {
+    setEnteredNameTouched(true);
+  }
+}
+```
+
+修改名稱，並且在多加一個 reset 函式，增加回傳項目
+
+```diff js:use-input.js
+function useInput(validate) {
+  ...
+-  function nameInputChangeHandler(event) {
++  function valueChangeHandler(event) {
+-    setEnteredName(event.target.value);
++    setEnteredValue (event.target.value);
+  }
+
+-  function nameInputBlurHandler(event) {
++  function inputBlurHandler(event) {
+-    setEnteredNameTouched(true);
++    setIsTouched(true);
+  }
+
+  function reset() {
+    setEnteredValue("");
+    setIsTouched(false);
+  }
+
+  return {
+    value: enteredValue,
+    isValid: valueIsValid,
+    hasError,
++    valueChangeHandler,
++    inputBlurHandler,
++    reset,
+  };
+
+}
+```
+
+接下來是在 SimpleInput.js 使用做好的 Custom hook
+
+```js:SimpleInput.js
+function SimpleInput(props) {
+  const {
+    value: enteredName,
+    isValid: enteredEmailIsValid,
+    hasError: nameInputHasError,
+    valueChangeHandler: nameInputChangeHandler,
+    inputBlurHandler: nameInputBlurHandler,
+    reset: resetNameInput,
+  } = useInput((value) => value.trim() !== "");
+
+  const [enteredName, setEnteredName] = useState("");
+}
+```
+
+刪掉舊的檢核邏輯
+
+```diff js:SimpleInput.js
+function SimpleInput(props) {
+-  const [enteredName, setEnteredName] = useState("");
+-  const [enteredNameTouched, setEnteredNameTouched] = useState(false);
+
+-  const enteredNameIsValid = enteredName.trim() !== "";
+-  const nameInputIsInvalid = !enteredNameIsValid && enteredNameTouched;
+
+-  function nameInputChangeHandler(event) {
+-    setEnteredName(event.target.value);
+-  }
+
+-  function nameInputBlurHandler(event) {
+-    setEnteredNameTouched(true);
+-  }
+
+  function fromSubmissionHandler(event) {
+-    setEnteredNameTouched(true); // 因為在輸入框合格以前根本不能送出，所以刪除
+
+-    setEnteredName("");
+-    setEnteredNameTouched(false);
++    resetNameInput();
+  }
+
+-  const nameInputClasses = nameInputIsInvalid
++  const nameInputClasses = nameInputHasError
+    ? "form-control invalid"
+    : "form-control";
+
+  return (
+-    {nameInputIsInvalid && (
++    {nameInputHasError && (
+      <p className="error-text">Name must not be empty.</p>
+    )}
+  )
+
+}
+```
+
+我們也可以借助第三方套件來完成檢核，例如 formik
+
+接下來練習用 useState 改成 useReducer，改寫 use-input.js（這個案例沒有一定要改的意義，所以只是為了練習 useReducer）
+
+```js:use-input.js
+
+const initialInputState = {
+  value: "",
+  isTouched: false
+};
+
+function inputStateReducer(state, action) {
+  return initialInputState;
+}
+
+
+function useInput() {
+  const [inputState, dispatch] = useReducer(
+    inputStateReducer,
+    initialInputState
+  );
+
+}
+```
+
+刪除舊的 useState
+
+```diff js:use-input.js
+
+function useInput() {
+-  const [enteredValue, setEnteredValue] = useState("");
+-  const [isTouched, setIsTouched] = useState(false);
+
+-  const valueIsValid = validate(enteredValue);
++  const valueIsValid = validate(inputState.value);
+-  const hasError = !valueIsValid && isTouched;
++  const hasError = !valueIsValid && inputState.isTouched;
+
+}
+```
+
+修改 handler 與 return value
+
+```diff js:use-input.js
+
+function useInput() {
+  function valueChangeHandler(event) {
+-    setEnteredValue(event.target.value);
++    dispatch({type: "INPUT", value: event.target.value})
+  }
+
+  function inputBlurHandler(event) {
+-    setIsTouched(true);
++    dispatch({ type: "BLUR" });
+  }
+
+  function reset() {
+-    setEnteredValue("");
+-    setIsTouched(false);
++    dispatch({type: "RESET"})
+  }
+
+  return {
+-    value: enteredValue,
++    value: inputState.value,
+    ...
+  }
+}
+```
+
+然後把 3 個 dispatch 加進 inputStateReducer 裡面
+
+```js:use-input.js
+function inputStateReducer(state, action) {
+
+  if (action.type === "INPUT") {
+    return { value: action.value, isTouched: state.isTouched };
+  }
+
+  if (action.type === "BLUR") {
+    return { value: state.value, isTouched: true };
+  }
+
+  if (action.type === "RESET") {
+    return { value: "", isTouched: false };
+  }
+
+  return initialInputState;
+}
+```

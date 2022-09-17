@@ -4140,3 +4140,464 @@ function inputStateReducer(state, action) {
   return initialInputState;
 }
 ```
+
+### Redux
+
+網站的狀態可分為 3 種：
+
+- Local State：存在單一元件內的狀態，建議使用 useState 或是 useReducer
+- Cross-Component State：可以跨元件影響的狀態（例如按鈕控制 popup 打開），一樣可以使用 useState 或是 useReducer，但是需要搭配 prop chain / prop drilling 使用
+- App-Wide State：影響整個網站的狀態（例如登入狀態），建議使用 React Context 或是 Reducer
+
+React Context 的缺點：
+
+- 複雜的前置作業、複雜的狀態管理
+- 效能低落，因為 React Context 適合使用在低頻度的資料更新場景，一但需要共享的狀態是屬於高度更新，那效能會變差
+
+Redux 的流程是
+
+```mermaid
+graph TD
+    A[Central Data Store] -->|Subscription| B[Components]
+    B --> |Dispatch| C[Action]
+    C --> |Forward to| D[Reducer Function]
+    D --> |Mutates Store Data| A
+```
+
+首先先試試看在沒有 react 的專案使用 redux，建立一個空的 node.js 專案，安裝 redux（指令：`npm install redux`）
+
+```js:redux-demo.js
+const redux = require("redux");
+
+// 然後建立reducer function
+// 參數是oldState跟dispatchAction
+// 回傳值是newStateObject
+// reduce function裡面不能有side effect，所以不能放HTTP Reuqest之類的程式
+function counterReducer(state = { counter: 0 }, action) {
+  // 當這隻reducer fn第一次執行時，state是undefined，所以必須指定初始值
+  return {
+    counter: state.counter + 1
+  };
+}
+
+// 首先先建立Data Store
+const store = redux.createStore(counterReducer);
+
+// 然後建立subscription
+function counterSubscriber() {
+  const latestState = store.getState();
+  console.log(latestState);
+}
+
+store.subscribe(counterSubscriber);
+
+// 可以用getState()除錯
+console.log(store.getState()); // {counter: 1}
+
+// 最後發布dispatch
+store.dispatch({type: 'increment'});
+
+// 然後在終端機執行node index.js，可以看到couter變成2
+```
+
+通常來說一隻 Redux 會有好幾種不同的 action，比方說可能有 increment，也可能有 decrement 等等，用來處理不同的動作，我們接著修改 reducer function
+
+```js
+function counterReducer(state = { counter: 0 }, action) {
+  // 當action是increment時
+  if (action.type === 'increment') {
+    return {
+      counter: state.counter + 1,
+    };
+  }
+
+  // 當action不是increment時，回傳原本的state
+  return state;
+}
+```
+
+同時，再 dispatch 另一隻 action，decrement，在這隻檔案最下面寫
+
+```js
+store.dispatch({ action: 'decrement' });
+```
+
+然後再回到 reducer fn，把 decrement 的情境給補上
+
+```js
+function counterReducer(state = { counter: 0 }, action) {
+  if (action.type === 'increment') {
+    ...
+  }
+
+  if (action.type === "decrement") {
+    return {
+      counter: state.counter - 1;
+    }
+  }
+
+  return state
+}
+```
+
+以上這些就是 Redux 的基本用法，如果是要在 React 專案使用 Redux 的話，需要安裝 redux 跟 react-redux 這兩個套件
+
+```
+npm install redux react-redux
+```
+
+接下來，建立`store/index.js`，通常 Redux 的文件都會放在 store 資料夾
+
+我們可以寫成 default import，像前面的 vanilla 案例一樣
+
+```js
+import redux from 'redux';
+
+const store = redux.createStore();
+```
+
+或也可以直接把 fn 拿出來 import
+
+```js
+import { createStore } from 'redux';
+
+const store = createStore();
+```
+
+程式完整版如下
+
+```js:store/index.js
+import { configureStore } from 'redux';
+
+function couterReducer(state = { counter: 0 }, action = {}) {
+  if (action.type === 'increment') {
+    return {
+      counter: state.counter + 1,
+    };
+  }
+
+  if (action.type === 'decrement') {
+    return {
+      counter: state.counter - 1,
+    };
+  }
+
+  return state;
+}
+
+const store = configureStore(couterReducer);
+
+export default store;
+```
+
+我們完成了建立 store，跟定義 reducer fn 的部分，然後直接進到 React Component 裡面，做 dispatch 的步驟，因為一個專案只能有一隻 Redux，所以進到 Root File 的 index.js，修改：
+
+```js:src/index.js
+import { Provider } from 'react-redux';
+import store from './store';
+...
+
+return (
+  <Provider store={store}>
+    <App />
+  </Provider>
+)
+```
+
+接下來，進到 Counter.js，修改程式
+
+- useSelector：可以存取一小塊的 Redux store
+- useStore：可以直接存取整個 Redux store
+- connect：可以連接 Counter Component 與 Redux store
+
+```diff js:Counter.js
++ import { useSelector } from 'react-redux';
+
+function Counter() {
+   // 使用useSelector之後，React會自動幫你補上subscription，所以counter會保持著最新狀態
+   // 一但刪除Counter這個componeont，背後的subscription也會被刪除
++  const counter = useSelector((state) => state.counter);
+
+  return (
+-    <div className={classes.value}>-- COUNTER VALUE --</div>
++    <div className={classes.value}>{counter}</div>
+  )
+}
+```
+
+這樣，我們的 UI 就能顯示最新的 Redux store 了。接著，我們要新增兩個按鈕，實作 increment 跟 decrement 的功能，這邊要再引入另一個 hook：`useDispatch`
+
+```diff js:Counter.js
+- import { useSelector } from 'react-redux';
++ import { useSelector, useDispatch } from 'react-redux';
+
+function Counter() {
++  const dispatch = useDispatch();
+
++  function incrementHandler() {
++    dispatch({ type: 'increment' });
++  }
+
++  function decrementHandler() {
++    dispatch({ type: 'decrement' });
++  }
+
+  return (
+    ...
++    <button type="button" onClick={incrementHandler}>Increment</button>
++    <button type="button" onClick={decrementHandler}>Decrement</button>
+  )
+}
+```
+
+接著我們來看看 Redux 該如何與 Class Component 搭配使用，所以將 Counter.js 改寫成 Class Component 練習。需要從 Redux 引入 connect，然後在 export 的地方將元件用 connect 包住
+
+```js
+export default connect()(Counter);
+```
+
+這種寫法叫做 High order component
+
+完整版程式如下
+
+```js:Counter.js
+import { Component } from 'react';
+import { connect, useDispatch, useSelector } from 'react-redux';
+
+class Counter extends Component {
+  constructor() {
+    super();
+    this.incrementHandler = this.incrementHandler.bind(this);
+    this.decrementHandler = this.decrementHandler.bind(this);
+  }
+
+  incrementHandler() {
+    this.props.increment();
+  }
+
+  decrementHandler() {
+    this.props.decrement();
+  }
+
+  toggleCounterHandler() {}
+
+  render() {
+    return (
+      <main className={classes.counter}>
+        <h1>Redux Counter</h1>
+        <div className={classes.value}>{this.props.counter}</div>
+        <div>
+          <button type="button" onClick={this.decrementHandler}>
+            Decrement
+          </button>
+          <button type="button" onClick={this.incrementHandler}>
+            Increment
+          </button>
+        </div>
+        <div></div>
+        <button type="button" onClick={this.toggleCounterHandler}>
+          Toggle Counter
+        </button>
+      </main>
+    );
+  }
+}
+
+function mapStateToProps(state) {
+  return {
+    counter: state.counter,
+  };
+}
+
+function mapDispatchToProps(dispatch) {
+  return {
+    increment: () => dispatch({ type: 'increment' }),
+    decrement: () => dispatch({ type: 'decrement' }),
+  };
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(Counter);
+```
+
+我們接下來再加上更複雜的功能，新增一個+5 按鈕，當這個按鈕點下時，計數器要一口氣+5，首先，修改 store/index.js，增加一組 action，並且指定 action playload
+
+```js:store/index.js
+function couterReducer(state = { counter: 0 }, action = {}) {
+  if (action.type === 'increase') {
+    return {
+      counter: state.counter + action.amount,
+    };
+  }
+}
+```
+
+然後回到 Counter.js，增加一組 handler 跟對應的 JSX
+
+```js:Counter.js
+function Counter() {
+  function increaseHandler() {
+    dispatch({ type: 'increase', amount: 5 });
+  }
+
+  return (
+    ...
+    <button type="button" onClick={increaseHandler}>
+      Increse by 5
+    </button>
+  )
+}
+
+```
+
+目前我們的 Redux 只管理一個變數：counter，現在我們加入另一個新的變數 showCounter，管理 toggle 狀態，首先修改 store/index.js 如下
+
+```diff store/index.js
++const initialState = { counter: 0, showCounter: true };
+
+-function couterReducer(state = { counter: 0 }, action = {}) {
++function couterReducer(state = initialState, action = {}) {
+  if (action.type === 'increment') {
+    return {
+      counter: state.counter + 1,
++     showCounter: state.showCounter
+    };
+  }
+
+  if (action.type === 'increase') {
+    return {
+      counter: state.counter + action.amount,
++     showCounter: state.showCounter
+    };
+  }
+
+  if (action.type === 'decrement') {
+    return {
+      counter: state.counter - 1,
++     showCounter: state.showCounter
+    };
+  }
+
++ if (action.type === 'toggle') {
++   return {
++     counter: state.counter,
++     showCounter: !state.showCounter,
++   };
++ }
+
+  return state;
+}
+```
+
+接下來回到 Counter.js，使用定義好的 Redux
+
+```diff js:Counter.js
+function Counter() {
++  const show = useSelector((state) => state.showCounter);
+
+  function toggleCounterHandler() {
++    dispatch({ type: 'toggle' });
+  }
+
+  return (
+    ...
+-     <div className={classes.value}>{counter}</div>
++    {show && <div className={classes.value}>{counter}</div>}
+  )
+}
+```
+
+現在，因為 Redux 的 action type 是寫成字串，比較不好管理，其中一個改法是這樣：
+
+```js:store/index.js
+export const INCREMENT = 'INCREMENT';
+
+function couterReducer(state = { counter: 0 }, action = {}) {
+  if (action.type === INCREMENT) {
+    ...
+  }
+
+  ...
+}
+```
+
+```js:Counter.js
+import { INCREMENT } from '../store';
+
+function Couter() {
+  ...
+
+  function incrementHandler() {
+    dispatch({ type: INCREMENT });
+  }
+}
+```
+
+也可以使用 Redux Toolkit 管理 Redux，執行`npm install @reduxjs/toolkit`，然後在 store/index.js 從@reduxjs/toolkit 引入 createSlice，並且撰寫 Reducer
+
+```js:store/index.js
+import { createSlice } from '@reduxjs/toolkit';
+import { createStore } from 'redux';
+
+const initialState = { counter: 0, showCounter: true };
+
+const counterSlice = createSlice({
+  name: 'counter',
+  initialState,
+  reducers: {
+    increment(state) {
+      // 使用toolkit就可以安心修改state了，雖然事實上，toolkit也沒有真的直接修改state，他透過imgur，將下面這行轉換成不直接修改state的語法
+      state.counter += 1;
+    },
+    decrement(state) {
+      state.counter -= 1;
+    },
+    increase(state, action) {
+      state.counter += action.payload; // 因為用了toolkit，所以一定要改為payload
+    },
+    toggleCounter(state) {
+      state.showCounter = !state.showCounter;
+    },
+  },
+});
+```
+
+然後，定義 store
+
+```js:store/index.js
+import { createSlice, configureStore } from '@reduxjs/toolkit';
+
+...
+
+const store = configureStore({
+  reducer: counterSlice.reducer,
+  // 如果有好幾個slice也可以這樣寫
+  // reducer: {
+  //   counter: counterSlice.reducer
+  // }
+});
+```
+
+接著，為了方便輸出使用，定義好 export action
+
+```js:store/index.js
+export const counterActions = counterSlice.actions;
+```
+
+這樣，在 Counter.js，就可以用`counterActions.increment()`的語法來使用 dispatch action
+
+```js:Counter.js
+import { counterActions } from '../store';
+
+function Counter() {
+  function incrementHandler() {
+    dispatch(counterActions.increment());
+  }
+
+  function increaseHandler() {
+    dispatch(counterActions.increase(5));
+    // dispatch在toolkit實際上被替換成為：{ type: SOME_UNIQUE_IDENTIFIER, payload: 10 }
+  }
+
+  ...
+}
+```

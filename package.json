@@ -1,6 +1,6 @@
 {
   "name": "react-complete-guide",
-  "homepage": "https://ianchen0419.github.io/react-complete-guide/redux-counter",
+  "homepage": "https://ianchen0419.github.io/react-complete-guide/redux-cart",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -17,7 +17,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "deploy": "npm run build && gh-pages -d build -m \"Updates --skip-ci\" -e \"redux-counter\"",
+    "deploy": "npm run build && gh-pages -d build -m \"Updates --skip-ci\" -e \"redux-cart\"",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

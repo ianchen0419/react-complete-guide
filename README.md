@@ -7,6 +7,7 @@ Demo sites
 - User Age: https://ianchen0419.github.io/react-complete-guide/user-age/index.html
 - Login Panel: https://ianchen0419.github.io/react-complete-guide/login-panel/index.html
 - React Meals: https://ianchen0419.github.io/react-complete-guide/react-meals/index.html
+- Redux Counter: https://ianchen0419.github.io/react-complete-guide/redux-counter/index.html
 
 ## Archived Projects
 
@@ -15,6 +16,7 @@ Demo sites
 - User Age - https://github.com/ianchen0419/react-complete-guide/tree/user-age
 - Login Panel - https://github.com/ianchen0419/react-complete-guide/tree/login-panel
 - React Meals - https://github.com/ianchen0419/react-complete-guide/tree/react-meals
+- Redux Counter: https://ianchen0419.github.io/react-complete-guide/redux-counter/index.html
 
 ## Airbnb ESLint Rules
 

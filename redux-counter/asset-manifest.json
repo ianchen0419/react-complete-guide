@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/react-complete-guide/redux-counter/static/css/main.5a040057.css",
+    "main.js": "/react-complete-guide/redux-counter/static/js/main.d04b673f.js",
+    "index.html": "/react-complete-guide/redux-counter/index.html",
+    "main.5a040057.css.map": "/react-complete-guide/redux-counter/static/css/main.5a040057.css.map",
+    "main.d04b673f.js.map": "/react-complete-guide/redux-counter/static/js/main.d04b673f.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.5a040057.css",
+    "static/js/main.d04b673f.js"
+  ]
+}

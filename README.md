@@ -4421,7 +4421,7 @@ function mapDispatchToProps(dispatch) {
 export default connect(mapStateToProps, mapDispatchToProps)(Counter);
 ```
 
-我們接下來再加上更複雜的功能，新增一個+5 按鈕，當這個按鈕點下時，計數器要一口氣+5，首先，修改 store/index.js，增加一組 action，並且指定 action playload
+我們接下來再加上更複雜的功能，新增一個+5 按鈕，當這個按鈕點下時，計數器要一口氣+5，首先，修改 store/index.js，增加一組 action，並且指定 action payload
 
 ```js:store/index.js
 function couterReducer(state = { counter: 0 }, action = {}) {
@@ -4603,3 +4603,7 @@ function Counter() {
   ...
 }
 ```
+
+如果要讓 redux toolkit 與 side effect 搭配使用，有兩種做法：一種是使用 Component 內的 useEffect，另一種是使用 redux 的 action creator (thunk)。
+
+Redux Devtools 是用來 debug Redux 的 [Chrome extension](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd)

@@ -32,6 +32,13 @@
         "html": false
       }
     ],
+    "no-param-reassign": [
+      "error",
+      {
+        "props": true,
+        "ignorePropertyModificationsFor": ["state"]
+      }
+    ],
     "sort-imports": [
       "error",
       { "ignoreCase": true, "ignoreDeclarationSort": true }

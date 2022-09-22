@@ -9,6 +9,7 @@ Demo sites
 - React Meals: https://ianchen0419.github.io/react-complete-guide/react-meals/index.html
 - Redux Counter: https://ianchen0419.github.io/react-complete-guide/redux-counter/index.html
 - Redux Cart: https://ianchen0419.github.io/react-complete-guide/redux-cart/index.html
+- React Router: https://ianchen0419.github.io/react-complete-guide/react-router/index.html
 
 ## Archived Projects
 
@@ -19,6 +20,7 @@ Demo sites
 - React Meals - https://github.com/ianchen0419/react-complete-guide/tree/react-meals
 - Redux Counter - https://github.com/ianchen0419/react-complete-guide/tree/redux-counter
 - Redux Cart - https://github.com/ianchen0419/react-complete-guide/tree/redux-cart
+- React Router - https://github.com/ianchen0419/react-complete-guide/tree/react-router
 
 ## Airbnb ESLint Rules
 
@@ -4609,3 +4611,231 @@ function Counter() {
 如果要讓 redux toolkit 與 side effect 搭配使用，有兩種做法：一種是使用 Component 內的 useEffect，另一種是使用 redux 的 action creator (thunk)。
 
 Redux Devtools 是用來 debug Redux 的 [Chrome extension](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd)
+
+### React Router (v5)
+
+首先安裝套件：`npm install react-router-dom@5`，然後修改 App.js，引入 react-router-dom 的 Route
+
+```js:App.js
+import { Route } from 'react-router-dom';
+```
+
+接下來，註冊 Routes
+
+```js:App.js
+function App() {
+  return (
+    <div>
+      <Route path="/welcome">
+        <Welcome />
+      </Route>
+      <Route path="/products">
+        <Products />
+      </Route>
+    </div>
+  );
+}
+```
+
+然後，修改 index.js 的 Root DOM，引入 BrowserRouter
+
+```js:index.js
+import { BrowserRouter } from 'react-router-dom';
+...
+
+root.render(
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>,
+);
+```
+
+然後把網址修改成`localhost:3000/welcome`或是`localhost:3000/products`，就可以看到 Router 切換的效果了
+
+接下來建立導覽列，讓我們可以直接用點的切換網址，新增 components/MainHeader.js
+
+```js:components/MainHeader.js
+function MainHeader() {
+  return (
+    <header>
+      <nav>
+        <ul>
+          <li>
+            <a href="/welcome">Welcome</a>
+          </li>
+          <li>
+            <a href="/products">Products</a>
+          </li>
+        </ul>
+      </nav>
+    </header>
+  );
+}
+
+export default MainHeader;
+```
+
+然後在 App.js 引入 MainHeader
+
+```js:App.js
+function App() {
+  return (
+    <div>
+      <MainHeader />
+      <main>
+        <Route path="/welcome">
+          <Welcome />
+        </Route>
+        <Route path="/products">
+          <Products />
+        </Route>
+      </main>
+    </div>
+  );
+}
+```
+
+這時點選 MainHeader 的連結，可以看到網址被切換，畫面也跟著改動了，但是因為透過<a>，導致每次點擊連結時，網頁還是會重送 Request，所以修改 MainHeader.js，將<a>換成 react-router-dom 的<Link>元件
+
+```diff js:components/MainHeader.js
++import { Link } from 'react-router-dom';
+
+function MainHeader() {
+  return (
+    ...
+-    <a href="/welcome">Welcome</a>
++    <Link to="/welcome">Welcome</Link>
+  )
+}
+```
+
+現在又有另一個問題：當我們點到 Welcome 頁時，我們的導覽頁沒辦法 highlight「Welcome」這個 link，所以我們沒辦法知道現在正在哪一頁，修改 MainHeader.js，將<Link>換成<NavLink>
+
+```diff js:components/MainHeader.js
+function MainHeader() {
+  return (
+    ...
+-    <Link to="/welcome">Welcome</Link>
++    <NavLink activeClassName={classes.active} to="/welcome">Welcome</NavLink>
+  )
+}
+```
+
+### Dynamic Routes
+
+修改 App.js，新增一組 Route
+
+```js:App.js
+function App() {
+  return (
+    ...
+    <Route path="/product-detail/:productId">
+      <ProductDetail />
+    </Route>
+  )
+}
+```
+
+編輯 ProductDetail.js
+
+```js:ProductDetail.js
+import { useParams } from 'react-router-dom';
+
+function ProductDetail() {
+  const params = useParams();
+
+  console.log(params.productId);
+}
+```
+
+如果將網址改成`localhost:3000/product-detail/p1`，可以看到 logger 噴出`p1`，如果將網址改成`localhost:3000/product-detail/p2`，則可以看到 logger 噴出`p2`
+
+現在我們遇到另一個問題，因為現在 App.js 的 routes 構造是這樣：
+
+```js:App.js
+function App() {
+  return (
+    <div>
+      <MainHeader />
+      <main>
+        <Route path="/welcome">
+          <Welcome />
+        </Route>
+        <Route path="/products">
+          <Products />
+        </Route>
+        <Route path="/products/:productId">
+          <ProductDetail />
+        </Route>
+      </main>
+    </div>
+  );
+}
+```
+
+當網址等於`localhost:3000/products/p1`時，由於這個網址同時符合<Route path="/products">與<Route path="/products/:productId">，所以這一頁會出現兩個元件：<Products />與<ProductDetail />，我們不想要讓這兩個元件同時出現，所以修改 App.js
+
+```diff js:App.js
+function App() {
+  return (
+    <div>
+      <MainHeader />
+      <main>
++        <Switch>
+          <Route path="/welcome">
+            <Welcome />
+          </Route>
+          <Route path="/products">
+            <Products />
+          </Route>
+          <Route path="/products/:productId">
+            <ProductDetail />
+          </Route>
++        </Switch>
+      </main>
+    </div>
+  );
+}
+```
+
+當底下的 Routes 有兩個以上符合網址列的條件，Switch 只會讓其中一個出現，決定的順序是由上往下，遇到就停止了，因為當 ProductDetail 與 Products 同時符合時，想要優先顯示 ProductDetail，所以可以先修改先後順序：
+
+```js:App.js
+function App() {
+  return (
+    ...
+    <Switch>
+      <Route path="/welcome">
+        <Welcome />
+      </Route>
+      <Route path="/products/:productId">
+        <ProductDetail />
+      </Route>
+      <Route path="/products">
+        <Products />
+      </Route>
+    </Switch>
+  )
+}
+```
+
+或者也可以保持順序不動，在`/products`那個 Route 加上`exact`屬性，`exact`表示完全比對，也就是只有當網址列完全等於`localhost:3000/products`，才會顯示`Products`
+
+```js:App.js
+function App() {
+  return (
+    ...
+    <Switch>
+      <Route path="/welcome">
+        <Welcome />
+      </Route>
+      <Route path="/products" exact>
+        <Products />
+      </Route>
+      <Route path="/products/:productId">
+        <ProductDetail />
+      </Route>
+    </Switch>
+  )
+}
+```

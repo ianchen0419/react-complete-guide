@@ -1,6 +1,6 @@
 import classes from './LoadingSpinner.module.css';
 
-const LoadingSpinner = () => {
+function LoadingSpinner() {
   return <div className={classes.spinner}></div>;
 }
 

@@ -1,7 +1,8 @@
 import CommentItem from './CommentItem';
+
 import classes from './CommentsList.module.css';
 
-const CommentsList = (props) => {
+function CommentsList(props) {
   return (
     <ul className={classes.comments}>
       {props.comments.map((comment) => (
@@ -9,6 +10,6 @@ const CommentsList = (props) => {
       ))}
     </ul>
   );
-};
+}
 
 export default CommentsList;

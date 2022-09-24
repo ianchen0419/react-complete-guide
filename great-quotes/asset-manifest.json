@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/react-complete-guide/great-quotes/static/css/main.c758088f.css",
+    "main.js": "/react-complete-guide/great-quotes/static/js/main.eba32ae9.js",
+    "index.html": "/react-complete-guide/great-quotes/index.html",
+    "main.c758088f.css.map": "/react-complete-guide/great-quotes/static/css/main.c758088f.css.map",
+    "main.eba32ae9.js.map": "/react-complete-guide/great-quotes/static/js/main.eba32ae9.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.c758088f.css",
+    "static/js/main.eba32ae9.js"
+  ]
+}

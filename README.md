@@ -5066,3 +5066,17 @@ function App() {
 ### Deploy
 
 利用`npm run deploy`指令部署 React，執行完後會出現一個`build`資料夾，React 的打包檔都是靜態檔案，所以需要找一個可以託管靜態檔案的 Hoster，比如 Firebase：
+
+### Authentication
+
+當實作驗證時，如果僅僅只是讓 Client 程式在判斷使用者是否註冊時，向 Server 發送「Yes/No」之類的資料，是遠遠不安全的，因為很容易被駭客攻擊，而常用的驗證方法有兩種：Server-Side Session 與 Authenication Token
+
+Server-Side Session：
+
+當 Server 允許使用者存取時，Server 會產生並且存下一組獨特的序號，並且將這組序號送回 Client 端，但是此方法有一個缺點：如果今天有多台 Server 的話會行不通
+
+Authenication Token：
+
+Server 只產生卻不儲存 Permission Token，並且傳送給客戶端
+
+我們使用 Firebase Auth REST API 做練習

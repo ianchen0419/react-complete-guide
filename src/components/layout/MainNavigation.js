@@ -1,22 +1,23 @@
-import { NavLink } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import classes from './MainNavigation.module.css';
 
 function MainNavigation() {
   return (
     <header className={classes.header}>
-      <div className={classes.logo}>Greate Quotes</div>
-      <nav className={classes.nav}>
+      <Link to="/">
+        <div className={classes.logo}>React Auth</div>
+      </Link>
+      <nav>
         <ul>
           <li>
-            <NavLink to="/quotes" activeClassName={classes.active}>
-              All Quotes
-            </NavLink>
+            <Link to="/auth">Login</Link>
           </li>
           <li>
-            <NavLink to="/new-quote" activeClassName={classes.active}>
-              Add a Quote
-            </NavLink>
+            <Link to="/profile">Profile</Link>
+          </li>
+          <li>
+            <button type="button">Logout</button>
           </li>
         </ul>
       </nav>

@@ -4841,3 +4841,228 @@ function App() {
   )
 }
 ```
+
+### react-router v5 to v6
+
+<Switch>改名為<Routes>
+
+```diff js:App.js
+function App() {
+  return (
+-    <Switch>
++    <Routes>
+      <Route path="/welcome">
+        <Welcome />
+      </Route>
+      <Route path="/products" exact>
+        <Products />
+      </Route>
+      <Route path="/products/:productId">
+        <ProductDetail />
+      </Route>
+-    </Switch>
++    </Routes>
+  )
+}
+
+```
+
+<Route>的 Page Component 的寫法有改變，不是包在裡面了，而是改成用 element 屬性
+
+```diff js:App.js
+function App() {
+  return (
++    <Route path="/welcome" element={</Welcome>} />
+-    <Route path="/welcome">
+-      <Welcome />
+-  </Route>
+  )
+}
+```
+
+exact match（完全比對）成為預設，在 v5，預設情況下 path 的比對模式是開頭比對，如果要做完全比對，要另外加上 exact 屬性。但是在 v6，預設比對就是完全比對了，因此可以移除 exact 屬性
+
+```diff js:App.js
+function App() {
+  return (
+-    <Route path="/products" element={<Products />} exact />
++    <Route path="/products" element={<Products />} />
+  )
+}
+```
+
+如果在 v6，想要寫開頭比對的話，則可以使用這種寫法：
+
+```js:App.js
+function App() {
+  return (
+    <Route path="/products/*" element={<Products />} exact />
+  )
+}
+```
+
+v6 也取消了 activeClassName，所以要改寫成這樣：
+
+```diff js:MainHeader.js
+function MainHeader() {
+  return (
+-    <NavLink activeClassName={classes.active} to='/welcome'>
++    <NavLink className={(navData) => navData.isActive ? classes.active : ''} to='/welcome'>
+      Welcome
+    </NavLink>
+  )
+}
+```
+
+v6 也將<Redirect>改成了<Navigate>，並且位置也移到了 element 裡面
+
+```diff js:App.js
+function App() {
+  return (
++    <Route path="/" element={<Navigate replace to="/welcome" />} />
+-    <Route path="/" exact>
+-      <Redirect to="/welcome" />
+-    </Route>
+  )
+}
+```
+
+在 v6，Nested Route 被規定一定要放在<Routes>裡面使用，並且 path 也改成 relative 的方式
+
+```diff js:Welcome.js
+function Welcome() {
+  return (
++   <Routes>
++    <Route path="new-user" element={<p>Welcome, new user!</p>} />
+-    <Route path="/welcome/new-user">
+-      <p>Welcome, new user!</p>
+-    </Route>
++   </Routes>
+  )
+}
+```
+
+因為 path 改成 relative 的方式，所以也要回到 App.js 修改 parent path
+
+```diff js:App.js
+function App() {
+  return (
+-    <Route path="/welcome" element={<Welcome />} />
++    <Route path="/welcome/*" element={<Welcome />} />
+  )
+}
+```
+
+同樣，只要是在 Welcome.js 的 Link 的 path，也會因為 relative path 的關係被簡化
+
+```diff js:Welcome.js
+function Welcome() {
+  return (
+-    <Link to="/welcome/new-user">New User</Link>
++    <Link to="new-user">New User</Link>
+  )
+}
+```
+
+因為 relative path 的關係，所以也不再需要如同以下範例的 custom path 了
+
+```js:QuoteDetail.js
+function QuoteDetail() {
+  return (
+    <Link to={`${match.url}/comments`}>
+    ...
+    <Route path={`${match.path}/comments`}>
+  )
+}
+```
+
+在 v6，也可以將 Nested Routes 放到 App.js 裡面去（這也是 Page Component 被改到 element 去的主要原因，因為 Children 要改成留給 Nest Routes 使用）
+
+並且新增了<Outlet>提示原本 Nested Routes 的場所
+
+```diff js:Welcome.js
+function Welcome() {
+  return (
++    <Outllet />
+-    <Routes>
+-      <Route path="new-user" element={<p>Welcome, new user!</p>} />
+-    </Routes>
+  )
+}
+```
+
+```diff js:App.js
+function App() {
+  return (
+    <Routes>
+-      <Route path="/welcome/*" element={<Welcome />} />
++      <Route path="/welcome/*" element={<Welcome />}>
++        <Route path="new-user" element={<p>Welcome, new user!</p>} />
++      </Route>
+    </Routes>
+  )
+}
+```
+
+另一個改變是 v5 的 useHistory 換成了 v6 的 useNavigate
+
+```diff js:Products.js
+function Products() {
+-  const history = useHistory();
++  const navigate = useNavigate():
+
+-  history.push(); // 換頁
++  navigate('/welcome') // 換頁
+
+-  history.replace(); // 轉址
++  navigate('/welcome', { replace: true }) // 轉址
+
+  navigate(-1); // 回到前一頁
+
+}
+```
+
+v6 也移除了<Prompt>，所以如果需要繼續使用<Prompt>的話，可以不要升級成 v6
+
+```js:QuoteForm.js
+function QuoteForm() {
+  return (
+    <Prompt when={isEntering} message={(location) => {'Are you want to leave?'}} />
+  )
+}
+```
+
+### Lazy Load
+
+Lazy load 將元件分割成數個 chunk，只有在需要用到時才載入，修改 App.js：
+
+```diff js:App.js
++ import React from 'react';
+...
+- import NewQuote from './pages/NewQuote';
+...
+
++ const NewQuote = React.lazy(() => import('./pages/NewQuote'));
+```
+
+然後要設定載入時間太長的 fallback UI，修改 App.js：
+
+```diff js:App.js
+- import React from 'react';
++ import React, { Suspense } from 'react';
+
+function App() {
+  return (
+    <Layout>
++     <Suspense fallback={<p>Loading...</p>}>
+        <Switch>
+        </Switch>
++     </Suspense>
+    </Layout>
+  )
+}
+```
+
+### Deploy
+
+利用`npm run deploy`指令部署 React，執行完後會出現一個`build`資料夾，React 的打包檔都是靜態檔案，所以需要找一個可以託管靜態檔案的 Hoster，比如 Firebase：

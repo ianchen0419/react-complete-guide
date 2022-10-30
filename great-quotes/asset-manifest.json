@@ -1,13 +1,29 @@
 {
   "files": {
-    "main.css": "/react-complete-guide/great-quotes/static/css/main.c758088f.css",
-    "main.js": "/react-complete-guide/great-quotes/static/js/main.eba32ae9.js",
+    "main.css": "/react-complete-guide/great-quotes/static/css/main.9e039cdb.css",
+    "main.js": "/react-complete-guide/great-quotes/static/js/main.6be74fa3.js",
+    "static/css/884.c1165da1.chunk.css": "/react-complete-guide/great-quotes/static/css/884.c1165da1.chunk.css",
+    "static/js/884.5775aa81.chunk.js": "/react-complete-guide/great-quotes/static/js/884.5775aa81.chunk.js",
+    "static/css/857.940ef02b.chunk.css": "/react-complete-guide/great-quotes/static/css/857.940ef02b.chunk.css",
+    "static/js/857.1138d4cf.chunk.js": "/react-complete-guide/great-quotes/static/js/857.1138d4cf.chunk.js",
+    "static/js/922.58cc0371.chunk.js": "/react-complete-guide/great-quotes/static/js/922.58cc0371.chunk.js",
+    "static/css/808.bfcb7ce4.chunk.css": "/react-complete-guide/great-quotes/static/css/808.bfcb7ce4.chunk.css",
+    "static/js/808.8adb8bbe.chunk.js": "/react-complete-guide/great-quotes/static/js/808.8adb8bbe.chunk.js",
+    "static/js/292.f173c748.chunk.js": "/react-complete-guide/great-quotes/static/js/292.f173c748.chunk.js",
     "index.html": "/react-complete-guide/great-quotes/index.html",
-    "main.c758088f.css.map": "/react-complete-guide/great-quotes/static/css/main.c758088f.css.map",
-    "main.eba32ae9.js.map": "/react-complete-guide/great-quotes/static/js/main.eba32ae9.js.map"
+    "main.9e039cdb.css.map": "/react-complete-guide/great-quotes/static/css/main.9e039cdb.css.map",
+    "main.6be74fa3.js.map": "/react-complete-guide/great-quotes/static/js/main.6be74fa3.js.map",
+    "884.c1165da1.chunk.css.map": "/react-complete-guide/great-quotes/static/css/884.c1165da1.chunk.css.map",
+    "884.5775aa81.chunk.js.map": "/react-complete-guide/great-quotes/static/js/884.5775aa81.chunk.js.map",
+    "857.940ef02b.chunk.css.map": "/react-complete-guide/great-quotes/static/css/857.940ef02b.chunk.css.map",
+    "857.1138d4cf.chunk.js.map": "/react-complete-guide/great-quotes/static/js/857.1138d4cf.chunk.js.map",
+    "922.58cc0371.chunk.js.map": "/react-complete-guide/great-quotes/static/js/922.58cc0371.chunk.js.map",
+    "808.bfcb7ce4.chunk.css.map": "/react-complete-guide/great-quotes/static/css/808.bfcb7ce4.chunk.css.map",
+    "808.8adb8bbe.chunk.js.map": "/react-complete-guide/great-quotes/static/js/808.8adb8bbe.chunk.js.map",
+    "292.f173c748.chunk.js.map": "/react-complete-guide/great-quotes/static/js/292.f173c748.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.c758088f.css",
-    "static/js/main.eba32ae9.js"
+    "static/css/main.9e039cdb.css",
+    "static/js/main.6be74fa3.js"
   ]
 }

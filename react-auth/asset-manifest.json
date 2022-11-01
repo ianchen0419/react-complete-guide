@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/react-complete-guide/react-auth/static/css/main.f4521987.css",
+    "main.js": "/react-complete-guide/react-auth/static/js/main.4f80ac40.js",
+    "index.html": "/react-complete-guide/react-auth/index.html",
+    "main.f4521987.css.map": "/react-complete-guide/react-auth/static/css/main.f4521987.css.map",
+    "main.4f80ac40.js.map": "/react-complete-guide/react-auth/static/js/main.4f80ac40.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f4521987.css",
+    "static/js/main.4f80ac40.js"
+  ]
+}

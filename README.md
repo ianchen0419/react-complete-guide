@@ -11,6 +11,7 @@ Demo sites
 - Redux Cart: https://ianchen0419.github.io/react-complete-guide/redux-cart/index.html
 - React Router: https://ianchen0419.github.io/react-complete-guide/react-router/index.html
 - Great Quotes: https://ianchen0419.github.io/react-complete-guide/great-quotes/index.html
+- React Auth: https://ianchen0419.github.io/react-complete-guide/react-auth/index.html
 
 ## Archived Projects
 
@@ -23,6 +24,7 @@ Demo sites
 - Redux Cart - https://github.com/ianchen0419/react-complete-guide/tree/redux-cart
 - React Router - https://github.com/ianchen0419/react-complete-guide/tree/react-router
 - Great Quotes - https://github.com/ianchen0419/react-complete-guide/tree/great-quotes
+- React Auth - https://github.com/ianchen0419/react-complete-guide/tree/react-auth
 
 ## Airbnb ESLint Rules
 
